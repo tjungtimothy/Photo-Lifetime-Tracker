@@ -1,9 +1,9 @@
-import '/components/common_nav_bar_widget.dart';
+import '/common_widgets/common_nav_bar/common_nav_bar_widget.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import 'profile_screen_widget.dart' show ProfileScreenWidget;
+import 'report_screen_widget.dart' show ReportScreenWidget;
 import 'package:flutter/material.dart';
 
-class ProfileScreenModel extends FlutterFlowModel<ProfileScreenWidget> {
+class ReportScreenModel extends FlutterFlowModel<ReportScreenWidget> {
   ///  State fields for stateful widgets in this page.
 
   // Model for CommonNavBar component.

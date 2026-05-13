@@ -77,14 +77,13 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
       errorBuilder: (context, state) =>
-          appStateNotifier.loggedIn ? HomeScreenWidget() : SignupScreenWidget(),
+          appStateNotifier.loggedIn ? HomeWidget() : SignupScreenWidget(),
       routes: [
         FFRoute(
           name: '_initialize',
           path: '/',
-          builder: (context, _) => appStateNotifier.loggedIn
-              ? HomeScreenWidget()
-              : SignupScreenWidget(),
+          builder: (context, _) =>
+              appStateNotifier.loggedIn ? HomeWidget() : SignupScreenWidget(),
         ),
         FFRoute(
           name: SplashScreenWidget.routeName,
@@ -102,14 +101,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           builder: (context, params) => SignupScreenWidget(),
         ),
         FFRoute(
+          name: HomeWidget.routeName,
+          path: HomeWidget.routePath,
+          builder: (context, params) => HomeWidget(),
+        ),
+        FFRoute(
           name: HomeScreenWidget.routeName,
           path: HomeScreenWidget.routePath,
           builder: (context, params) => HomeScreenWidget(),
-        ),
-        FFRoute(
-          name: ExampleWidget.routeName,
-          path: ExampleWidget.routePath,
-          builder: (context, params) => ExampleWidget(),
         ),
         FFRoute(
           name: PhotoDetailScreenWidget.routeName,

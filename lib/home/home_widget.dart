@@ -5,28 +5,28 @@ import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'home_screen_model.dart';
-export 'home_screen_model.dart';
+import 'home_model.dart';
+export 'home_model.dart';
 
-class HomeScreenWidget extends StatefulWidget {
-  const HomeScreenWidget({super.key});
+class HomeWidget extends StatefulWidget {
+  const HomeWidget({super.key});
 
-  static String routeName = 'home_screen';
-  static String routePath = '/homeScreen';
+  static String routeName = 'home';
+  static String routePath = '/home';
 
   @override
-  State<HomeScreenWidget> createState() => _HomeScreenWidgetState();
+  State<HomeWidget> createState() => _HomeWidgetState();
 }
 
-class _HomeScreenWidgetState extends State<HomeScreenWidget> {
-  late HomeScreenModel _model;
+class _HomeWidgetState extends State<HomeWidget> {
+  late HomeModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => HomeScreenModel());
+    _model = createModel(context, () => HomeModel());
 
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();

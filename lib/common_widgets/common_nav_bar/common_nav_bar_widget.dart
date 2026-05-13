@@ -50,7 +50,7 @@ class _CommonNavBarWidgetState extends State<CommonNavBarWidget> {
         currentIndex: widget.navIndex,
         onTap: (index) async {
           if (index == 0 ? true : false) {
-            context.pushNamed(ExampleWidget.routeName);
+            context.pushNamed(HomeScreenWidget.routeName);
           } else {
             if (index == 1) {
               context.pushNamed(UploadScreenWidget.routeName);

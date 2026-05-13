@@ -1,10 +1,10 @@
-import '/components/common_nav_bar_widget.dart';
+import '/common_widgets/common_nav_bar/common_nav_bar_widget.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
-import 'example_widget.dart' show ExampleWidget;
+import 'home_screen_widget.dart' show HomeScreenWidget;
 import 'package:flutter/material.dart';
 
-class ExampleModel extends FlutterFlowModel<ExampleWidget> {
+class HomeScreenModel extends FlutterFlowModel<HomeScreenWidget> {
   ///  State fields for stateful widgets in this page.
 
   // Model for CommonNavBar component.

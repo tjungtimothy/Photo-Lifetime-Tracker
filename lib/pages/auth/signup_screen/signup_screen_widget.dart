@@ -1157,7 +1157,7 @@ class _SignupScreenWidgetState extends State<SignupScreenWidget> {
                                                 }
 
                                                 context.pushNamedAuth(
-                                                    ExampleWidget.routeName,
+                                                    HomeScreenWidget.routeName,
                                                     context.mounted);
                                               },
                                               child: Material(

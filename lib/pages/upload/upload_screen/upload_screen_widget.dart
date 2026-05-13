@@ -1,4 +1,4 @@
-import '/components/common_nav_bar_widget.dart';
+import '/common_widgets/common_nav_bar/common_nav_bar_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;

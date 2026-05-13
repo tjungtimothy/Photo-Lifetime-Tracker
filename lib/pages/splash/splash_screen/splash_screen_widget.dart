@@ -1,6 +1,7 @@
 import '/backend/supabase/supabase.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'splash_screen_model.dart';
@@ -160,55 +161,64 @@ class _SplashScreenWidgetState extends State<SplashScreenWidget> {
                           child: Padding(
                             padding: EdgeInsetsDirectional.fromSTEB(
                                 15.0, 15.0, 15.0, 0.0),
-                            child: Material(
-                              color: Colors.transparent,
-                              elevation: 3.0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(22.0),
-                              ),
-                              child: Container(
-                                width: 350.0,
-                                height: 45.0,
-                                decoration: BoxDecoration(
-                                  gradient: LinearGradient(
-                                    colors: [
-                                      Color(0xFF3E82FC),
-                                      Color(0xFF254D96)
-                                    ],
-                                    stops: [0.0, 0.9],
-                                    begin: AlignmentDirectional(0.0, -1.0),
-                                    end: AlignmentDirectional(0, 1.0),
-                                  ),
+                            child: InkWell(
+                              splashColor: Colors.transparent,
+                              focusColor: Colors.transparent,
+                              hoverColor: Colors.transparent,
+                              highlightColor: Colors.transparent,
+                              onTap: () async {
+                                context.pushNamed(LoginScreenWidget.routeName);
+                              },
+                              child: Material(
+                                color: Colors.transparent,
+                                elevation: 3.0,
+                                shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(22.0),
-                                  border: Border.all(
-                                    color: Color(0xFF3E82FC),
-                                  ),
                                 ),
-                                child: Align(
-                                  alignment: AlignmentDirectional(0.0, 0.0),
-                                  child: Text(
-                                    'GET STARTED',
-                                    textAlign: TextAlign.center,
-                                    style: FlutterFlowTheme.of(context)
-                                        .bodyMedium
-                                        .override(
-                                          font: GoogleFonts.poppins(
+                                child: Container(
+                                  width: 350.0,
+                                  height: 45.0,
+                                  decoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      colors: [
+                                        Color(0xFF3E82FC),
+                                        Color(0xFF254D96)
+                                      ],
+                                      stops: [0.0, 0.9],
+                                      begin: AlignmentDirectional(0.0, -1.0),
+                                      end: AlignmentDirectional(0, 1.0),
+                                    ),
+                                    borderRadius: BorderRadius.circular(22.0),
+                                    border: Border.all(
+                                      color: Color(0xFF3E82FC),
+                                    ),
+                                  ),
+                                  child: Align(
+                                    alignment: AlignmentDirectional(0.0, 0.0),
+                                    child: Text(
+                                      'GET STARTED',
+                                      textAlign: TextAlign.center,
+                                      style: FlutterFlowTheme.of(context)
+                                          .bodyMedium
+                                          .override(
+                                            font: GoogleFonts.poppins(
+                                              fontWeight: FontWeight.w500,
+                                              fontStyle:
+                                                  FlutterFlowTheme.of(context)
+                                                      .bodyMedium
+                                                      .fontStyle,
+                                            ),
+                                            color: Color(0xFFEDEDED),
+                                            fontSize: 15.0,
+                                            letterSpacing: 0.0,
                                             fontWeight: FontWeight.w500,
                                             fontStyle:
                                                 FlutterFlowTheme.of(context)
                                                     .bodyMedium
                                                     .fontStyle,
                                           ),
-                                          color: Color(0xFFEDEDED),
-                                          fontSize: 15.0,
-                                          letterSpacing: 0.0,
-                                          fontWeight: FontWeight.w500,
-                                          fontStyle:
-                                              FlutterFlowTheme.of(context)
-                                                  .bodyMedium
-                                                  .fontStyle,
-                                        ),
-                                    overflow: TextOverflow.ellipsis,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
                                   ),
                                 ),
                               ),

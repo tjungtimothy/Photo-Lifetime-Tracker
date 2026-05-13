@@ -1,32 +1,32 @@
-import '/components/common_nav_bar_widget.dart';
+import '/common_widgets/common_nav_bar/common_nav_bar_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/index.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'example_model.dart';
-export 'example_model.dart';
+import 'home_screen_model.dart';
+export 'home_screen_model.dart';
 
-class ExampleWidget extends StatefulWidget {
-  const ExampleWidget({super.key});
+class HomeScreenWidget extends StatefulWidget {
+  const HomeScreenWidget({super.key});
 
-  static String routeName = 'example';
-  static String routePath = '/example';
+  static String routeName = 'home_screen';
+  static String routePath = '/homeScreen';
 
   @override
-  State<ExampleWidget> createState() => _ExampleWidgetState();
+  State<HomeScreenWidget> createState() => _HomeScreenWidgetState();
 }
 
-class _ExampleWidgetState extends State<ExampleWidget> {
-  late ExampleModel _model;
+class _HomeScreenWidgetState extends State<HomeScreenWidget> {
+  late HomeScreenModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => ExampleModel());
+    _model = createModel(context, () => HomeScreenModel());
 
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();

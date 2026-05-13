@@ -1,8 +1,9 @@
 import '/flutter_flow/flutter_flow_util.dart';
-import 'common_nav_bar_copy_widget.dart' show CommonNavBarCopyWidget;
+import '/index.dart';
+import 'splash_screen_widget.dart' show SplashScreenWidget;
 import 'package:flutter/material.dart';
 
-class CommonNavBarCopyModel extends FlutterFlowModel<CommonNavBarCopyWidget> {
+class SplashScreenModel extends FlutterFlowModel<SplashScreenWidget> {
   @override
   void initState(BuildContext context) {}
 

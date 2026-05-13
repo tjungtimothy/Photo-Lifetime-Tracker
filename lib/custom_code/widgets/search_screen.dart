@@ -9,14 +9,12 @@ import 'package:flutter/material.dart';
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
 class SearchScreen extends StatefulWidget {
-  const SearchScreen({
-    super.key,
-    this.width,
-    this.height,
-  });
+  const SearchScreen(
+      {super.key, this.width, this.height, required this.onCardTap});
 
   final double? width;
   final double? height;
+  final Future Function(String mediaId) onCardTap;
 
   @override
   State<SearchScreen> createState() => _SearchScreenState();
@@ -82,7 +80,10 @@ class _SearchScreenState extends State<SearchScreen> {
   }
 
   void _navigateToDetail(Map<String, dynamic> item) {
-    // AppState mein save karo
+    final String mediaId = item['id']?.toString() ?? '';
+
+    // Update AppState
+    FFAppState().selectedMediaId = mediaId;
     FFAppState().selectedMediaId = item['id']?.toString() ?? '';
     FFAppState().selectedMediaTitle = item['title']?.toString() ?? '';
     FFAppState().selectedMediaFileUrl = item['file_path']?.toString() ?? '';
@@ -96,8 +97,9 @@ class _SearchScreenState extends State<SearchScreen> {
     FFAppState().selectedMediaEntry = item['photo_address']?.toString() ?? '';
     FFAppState().selectedMediaDate = item['capture_date']?.toString() ?? '';
 
-    // PhotoDetail screen par navigate karo
-    context.pushNamed('photoDetail_screen');
+    // ✅ Exactly yahi naam hai tumhara — screenshot mein dikh raha hai
+    // context.pushNamed('profile_screen');
+    widget.onCardTap(mediaId);
   }
 
   Widget _buildResultCard(Map<String, dynamic> item) {
@@ -121,7 +123,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: const Color(0xFF1A1D21),
+          color: const Color(0x181C1E),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withOpacity(0.07)),
         ),
@@ -254,10 +256,9 @@ class _SearchScreenState extends State<SearchScreen> {
           // ── Search Bar ──
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            color: const Color(0xFF0D1117),
+            color: const Color(0x181C1E),
             child: Row(
               children: [
-                // Back button
                 GestureDetector(
                   onTap: () => context.pop(),
                   child: Container(
@@ -274,16 +275,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 Expanded(
                   child: Container(
                     decoration: BoxDecoration(
-                      gradient: const LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: [Color(0xFF2C2F33), Color(0xFF1A1D21)],
-                      ),
                       borderRadius: BorderRadius.circular(100),
-                      border: Border.all(
-                        color: Colors.white.withOpacity(0.1),
-                        width: 1,
-                      ),
                     ),
                     child: TextField(
                       controller: _searchController,
@@ -395,13 +387,6 @@ class _SearchScreenState extends State<SearchScreen> {
                                   ),
                                 ),
                                 const SizedBox(height: 6),
-                                Text(
-                                  '"${_searchController.text}" se koi match nahi',
-                                  style: TextStyle(
-                                    color: Colors.white.withOpacity(0.25),
-                                    fontSize: 12,
-                                  ),
-                                ),
                               ],
                             ),
                           )

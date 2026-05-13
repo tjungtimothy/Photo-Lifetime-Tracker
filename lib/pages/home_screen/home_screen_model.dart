@@ -9,10 +9,6 @@ class HomeScreenModel extends FlutterFlowModel<HomeScreenWidget> {
 
   // Model for CommonNavBar component.
   late CommonNavBarModel commonNavBarModel;
-  // State field(s) for TextField widget.
-  FocusNode? textFieldFocusNode;
-  TextEditingController? textController;
-  String? Function(BuildContext, String?)? textControllerValidator;
 
   @override
   void initState(BuildContext context) {
@@ -22,7 +18,5 @@ class HomeScreenModel extends FlutterFlowModel<HomeScreenWidget> {
   @override
   void dispose() {
     commonNavBarModel.dispose();
-    textFieldFocusNode?.dispose();
-    textController?.dispose();
   }
 }

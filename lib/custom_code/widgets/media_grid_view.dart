@@ -95,9 +95,9 @@ class _MediaGridViewState extends State<MediaGridView> {
         double.tryParse(item['average_score']?.toString() ?? '0') ?? 0.0;
     FFAppState().selectedMediaHighScore =
         double.tryParse(item['highest_score']?.toString() ?? '0') ?? 0.0;
-    FFAppState().selectedMediaMetadata = item['Metadata']?.toString() ?? '';
+    FFAppState().selectedMediaMetadata = jsonEncode(item['Metadata'] ?? {});
     FFAppState().selectedMediaProcessing =
-        item['processing_data']?.toString() ?? '';
+        jsonEncode(item['processing_data'] ?? {});
     FFAppState().selectedMediaEntry = item['photo_address']?.toString() ?? '';
     FFAppState().selectedMediaDate = item['capture_date']?.toString() ?? '';
 

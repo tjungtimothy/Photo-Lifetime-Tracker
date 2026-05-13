@@ -129,6 +129,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: ProfileScreenWidget.routeName,
           path: ProfileScreenWidget.routePath,
           builder: (context, params) => ProfileScreenWidget(),
+        ),
+        FFRoute(
+          name: SearchscreenWidget.routeName,
+          path: SearchscreenWidget.routePath,
+          builder: (context, params) => SearchscreenWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

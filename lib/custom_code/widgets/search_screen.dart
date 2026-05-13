@@ -8,9 +8,6 @@ import 'package:flutter/material.dart';
 // Begin custom widget code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
-import '/custom_code/widgets/index.dart';
-import '/flutter_flow/custom_functions.dart';
-
 class SearchScreen extends StatefulWidget {
   const SearchScreen({
     super.key,

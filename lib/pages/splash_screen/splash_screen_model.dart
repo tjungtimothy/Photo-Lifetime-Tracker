@@ -1,5 +1,4 @@
 import '/flutter_flow/flutter_flow_util.dart';
-import '/index.dart';
 import 'splash_screen_widget.dart' show SplashScreenWidget;
 import 'package:flutter/material.dart';
 

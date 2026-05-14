@@ -349,263 +349,338 @@ class _HomeWidgetState extends State<HomeWidget> {
                                     itemBuilder: (context, gridViewIndex) {
                                       final gridViewMediaRow =
                                           gridViewMediaRowList[gridViewIndex];
-                                      return Padding(
-                                        padding: EdgeInsetsDirectional.fromSTEB(
-                                            10.0, 10.0, 10.0, 10.0),
-                                        child: InkWell(
-                                          splashColor: Colors.transparent,
-                                          focusColor: Colors.transparent,
-                                          hoverColor: Colors.transparent,
-                                          highlightColor: Colors.transparent,
-                                          onTap: () async {
-                                            context.pushNamed(
-                                                PhotoDetailScreenWidget
-                                                    .routeName);
-                                          },
-                                          child: Container(
-                                            decoration: BoxDecoration(
-                                              borderRadius:
-                                                  BorderRadius.circular(14.0),
-                                            ),
-                                            child: Stack(
-                                              children: [
-                                                ClipRRect(
+                                      return Stack(
+                                        children: [
+                                          Padding(
+                                            padding:
+                                                EdgeInsetsDirectional.fromSTEB(
+                                                    10.0, 10.0, 10.0, 10.0),
+                                            child: InkWell(
+                                              splashColor: Colors.transparent,
+                                              focusColor: Colors.transparent,
+                                              hoverColor: Colors.transparent,
+                                              highlightColor:
+                                                  Colors.transparent,
+                                              onTap: () async {
+                                                context.pushNamed(
+                                                    PhotoDetailScreenWidget
+                                                        .routeName);
+                                              },
+                                              child: Container(
+                                                decoration: BoxDecoration(
                                                   borderRadius:
                                                       BorderRadius.circular(
                                                           14.0),
-                                                  child: Image.network(
-                                                    'https://cdn.pixabay.com/photo/2018/01/14/23/12/nature-3082832_640.jpg',
-                                                    width: 200.0,
-                                                    height: 200.0,
-                                                    fit: BoxFit.cover,
-                                                  ),
                                                 ),
-                                                Align(
-                                                  alignment:
-                                                      AlignmentDirectional(
-                                                          -1.0, 0.0),
-                                                  child: Padding(
-                                                    padding:
-                                                        EdgeInsetsDirectional
-                                                            .fromSTEB(0.0, 10.0,
-                                                                0.0, 0.0),
-                                                    child: Container(
-                                                      width: double.infinity,
-                                                      height: double.infinity,
-                                                      decoration: BoxDecoration(
-                                                        gradient:
-                                                            LinearGradient(
-                                                          colors: [
-                                                            Color(0x00555464),
-                                                            Color(0xD7000000)
-                                                          ],
-                                                          stops: [0.0, 1.0],
-                                                          begin:
-                                                              AlignmentDirectional(
-                                                                  0.0, -1.0),
-                                                          end:
-                                                              AlignmentDirectional(
-                                                                  0, 1.0),
-                                                        ),
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(14.0),
+                                                child: Stack(
+                                                  children: [
+                                                    ClipRRect(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              14.0),
+                                                      child: Image.network(
+                                                        'https://cdn.pixabay.com/photo/2018/01/14/23/12/nature-3082832_640.jpg',
+                                                        width: 200.0,
+                                                        height: 200.0,
+                                                        fit: BoxFit.cover,
                                                       ),
+                                                    ),
+                                                    Align(
                                                       alignment:
                                                           AlignmentDirectional(
-                                                              -1.0, 1.0),
+                                                              -1.0, 0.0),
                                                       child: Padding(
                                                         padding:
                                                             EdgeInsetsDirectional
                                                                 .fromSTEB(
-                                                                    10.0,
                                                                     0.0,
                                                                     10.0,
-                                                                    10.0),
-                                                        child: Column(
-                                                          mainAxisSize:
-                                                              MainAxisSize.max,
-                                                          mainAxisAlignment:
-                                                              MainAxisAlignment
-                                                                  .end,
-                                                          crossAxisAlignment:
-                                                              CrossAxisAlignment
-                                                                  .start,
-                                                          children: [
-                                                            Opacity(
-                                                              opacity: 0.6,
-                                                              child: Padding(
-                                                                padding:
-                                                                    EdgeInsetsDirectional
+                                                                    0.0,
+                                                                    0.0),
+                                                        child: Container(
+                                                          width:
+                                                              double.infinity,
+                                                          height:
+                                                              double.infinity,
+                                                          decoration:
+                                                              BoxDecoration(
+                                                            gradient:
+                                                                LinearGradient(
+                                                              colors: [
+                                                                Color(
+                                                                    0x00555464),
+                                                                Color(
+                                                                    0xD7000000)
+                                                              ],
+                                                              stops: [0.0, 1.0],
+                                                              begin:
+                                                                  AlignmentDirectional(
+                                                                      0.0,
+                                                                      -1.0),
+                                                              end:
+                                                                  AlignmentDirectional(
+                                                                      0, 1.0),
+                                                            ),
+                                                            borderRadius:
+                                                                BorderRadius
+                                                                    .circular(
+                                                                        14.0),
+                                                          ),
+                                                          alignment:
+                                                              AlignmentDirectional(
+                                                                  -1.0, 1.0),
+                                                          child: Padding(
+                                                            padding:
+                                                                EdgeInsetsDirectional
+                                                                    .fromSTEB(
+                                                                        10.0,
+                                                                        0.0,
+                                                                        10.0,
+                                                                        10.0),
+                                                            child: Column(
+                                                              mainAxisSize:
+                                                                  MainAxisSize
+                                                                      .max,
+                                                              mainAxisAlignment:
+                                                                  MainAxisAlignment
+                                                                      .end,
+                                                              crossAxisAlignment:
+                                                                  CrossAxisAlignment
+                                                                      .start,
+                                                              children: [
+                                                                Opacity(
+                                                                  opacity: 0.6,
+                                                                  child:
+                                                                      Padding(
+                                                                    padding: EdgeInsetsDirectional
                                                                         .fromSTEB(
                                                                             0.0,
                                                                             3.0,
                                                                             0.0,
                                                                             3.0),
-                                                                child: Material(
-                                                                  color: Colors
-                                                                      .transparent,
-                                                                  elevation:
-                                                                      2.0,
-                                                                  shape:
-                                                                      RoundedRectangleBorder(
-                                                                    borderRadius:
-                                                                        BorderRadius.circular(
-                                                                            5.0),
-                                                                  ),
-                                                                  child:
-                                                                      Container(
-                                                                    decoration:
-                                                                        BoxDecoration(
-                                                                      color: Color(
-                                                                          0xFF22B162),
-                                                                      boxShadow: [
-                                                                        BoxShadow(
-                                                                          blurRadius:
-                                                                              4.0,
-                                                                          color:
-                                                                              Color(0x33000000),
-                                                                          offset:
-                                                                              Offset(
-                                                                            0.0,
-                                                                            2.0,
-                                                                          ),
-                                                                        )
-                                                                      ],
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                              5.0),
-                                                                      border:
-                                                                          Border
-                                                                              .all(
-                                                                        color: Color(
-                                                                            0xFF3FD384),
-                                                                        width:
-                                                                            1.0,
-                                                                      ),
-                                                                    ),
                                                                     child:
-                                                                        Padding(
-                                                                      padding: EdgeInsetsDirectional.fromSTEB(
-                                                                          5.0,
-                                                                          3.0,
-                                                                          5.0,
-                                                                          3.0),
+                                                                        Material(
+                                                                      color: Colors
+                                                                          .transparent,
+                                                                      elevation:
+                                                                          2.0,
+                                                                      shape:
+                                                                          RoundedRectangleBorder(
+                                                                        borderRadius:
+                                                                            BorderRadius.circular(5.0),
+                                                                      ),
                                                                       child:
-                                                                          Text(
-                                                                        'WINNER',
-                                                                        style: FlutterFlowTheme.of(context)
-                                                                            .bodyMedium
-                                                                            .override(
-                                                                              font: GoogleFonts.inter(
-                                                                                fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                                                                                fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                                                                          Container(
+                                                                        decoration:
+                                                                            BoxDecoration(
+                                                                          color:
+                                                                              Color(0xFF3E82FC),
+                                                                          boxShadow: [
+                                                                            BoxShadow(
+                                                                              blurRadius: 4.0,
+                                                                              color: Color(0x33000000),
+                                                                              offset: Offset(
+                                                                                0.0,
+                                                                                2.0,
                                                                               ),
-                                                                              letterSpacing: 0.0,
-                                                                              fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
-                                                                              fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
-                                                                            ),
+                                                                            )
+                                                                          ],
+                                                                          borderRadius:
+                                                                              BorderRadius.circular(5.0),
+                                                                          border:
+                                                                              Border.all(
+                                                                            color:
+                                                                                Color(0xFF3FD384),
+                                                                            width:
+                                                                                1.0,
+                                                                          ),
+                                                                        ),
+                                                                        child:
+                                                                            Padding(
+                                                                          padding: EdgeInsetsDirectional.fromSTEB(
+                                                                              5.0,
+                                                                              3.0,
+                                                                              5.0,
+                                                                              3.0),
+                                                                          child:
+                                                                              Text(
+                                                                            'WINNER',
+                                                                            style: FlutterFlowTheme.of(context).bodyMedium.override(
+                                                                                  font: GoogleFonts.inter(
+                                                                                    fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
+                                                                                    fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                                                                                  ),
+                                                                                  letterSpacing: 0.0,
+                                                                                  fontWeight: FlutterFlowTheme.of(context).bodyMedium.fontWeight,
+                                                                                  fontStyle: FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                                                                                ),
+                                                                          ),
+                                                                        ),
                                                                       ),
                                                                     ),
                                                                   ),
                                                                 ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  EdgeInsetsDirectional
+                                                                Padding(
+                                                                  padding: EdgeInsetsDirectional
                                                                       .fromSTEB(
                                                                           0.0,
                                                                           0.0,
                                                                           0.0,
                                                                           3.0),
-                                                              child: Text(
-                                                                'Rick A. Thompson',
-                                                                style: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .override(
-                                                                  font: GoogleFonts
-                                                                      .poppins(
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w500,
-                                                                    fontStyle: FlutterFlowTheme.of(
+                                                                  child: Text(
+                                                                    'Rick A. Thompson',
+                                                                    style: FlutterFlowTheme.of(
                                                                             context)
                                                                         .bodyMedium
-                                                                        .fontStyle,
-                                                                  ),
-                                                                  letterSpacing:
-                                                                      0.0,
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .w500,
-                                                                  fontStyle: FlutterFlowTheme.of(
-                                                                          context)
-                                                                      .bodyMedium
-                                                                      .fontStyle,
-                                                                  shadows: [
-                                                                    Shadow(
-                                                                      color: Colors
-                                                                          .black,
-                                                                      offset: Offset(
-                                                                          2.0,
-                                                                          2.0),
-                                                                      blurRadius:
-                                                                          5.0,
-                                                                    )
-                                                                  ],
-                                                                ),
-                                                              ),
-                                                            ),
-                                                            Padding(
-                                                              padding:
-                                                                  EdgeInsetsDirectional
-                                                                      .fromSTEB(
-                                                                          0.0,
-                                                                          0.0,
-                                                                          0.0,
-                                                                          3.0),
-                                                              child: Text(
-                                                                'Sed ut perspiciatis',
-                                                                style: FlutterFlowTheme.of(
-                                                                        context)
-                                                                    .bodyMedium
-                                                                    .override(
+                                                                        .override(
                                                                       font: GoogleFonts
-                                                                          .inter(
-                                                                        fontWeight: FlutterFlowTheme.of(context)
-                                                                            .bodyMedium
-                                                                            .fontWeight,
+                                                                          .poppins(
+                                                                        fontWeight:
+                                                                            FontWeight.w500,
                                                                         fontStyle: FlutterFlowTheme.of(context)
                                                                             .bodyMedium
                                                                             .fontStyle,
                                                                       ),
-                                                                      color: Color(
-                                                                          0xFF9E9D9D),
                                                                       letterSpacing:
                                                                           0.0,
-                                                                      fontWeight: FlutterFlowTheme.of(
-                                                                              context)
-                                                                          .bodyMedium
-                                                                          .fontWeight,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w500,
                                                                       fontStyle: FlutterFlowTheme.of(
                                                                               context)
                                                                           .bodyMedium
                                                                           .fontStyle,
+                                                                      shadows: [
+                                                                        Shadow(
+                                                                          color:
+                                                                              Colors.black,
+                                                                          offset: Offset(
+                                                                              2.0,
+                                                                              2.0),
+                                                                          blurRadius:
+                                                                              5.0,
+                                                                        )
+                                                                      ],
                                                                     ),
-                                                              ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                                Padding(
+                                                                  padding: EdgeInsetsDirectional
+                                                                      .fromSTEB(
+                                                                          0.0,
+                                                                          0.0,
+                                                                          0.0,
+                                                                          3.0),
+                                                                  child: Text(
+                                                                    'Sed ut perspiciatis',
+                                                                    style: FlutterFlowTheme.of(
+                                                                            context)
+                                                                        .bodyMedium
+                                                                        .override(
+                                                                          font:
+                                                                              GoogleFonts.inter(
+                                                                            fontWeight:
+                                                                                FlutterFlowTheme.of(context).bodyMedium.fontWeight,
+                                                                            fontStyle:
+                                                                                FlutterFlowTheme.of(context).bodyMedium.fontStyle,
+                                                                          ),
+                                                                          color:
+                                                                              Color(0xFF9E9D9D),
+                                                                          letterSpacing:
+                                                                              0.0,
+                                                                          fontWeight: FlutterFlowTheme.of(context)
+                                                                              .bodyMedium
+                                                                              .fontWeight,
+                                                                          fontStyle: FlutterFlowTheme.of(context)
+                                                                              .bodyMedium
+                                                                              .fontStyle,
+                                                                        ),
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                  ),
+                                                                ),
+                                                              ],
                                                             ),
-                                                          ],
+                                                          ),
                                                         ),
                                                       ),
                                                     ),
-                                                  ),
+                                                  ],
                                                 ),
-                                              ],
+                                              ),
                                             ),
                                           ),
-                                        ),
+                                          Align(
+                                            alignment: AlignmentDirectional(
+                                                0.85, 1.13),
+                                            child: Padding(
+                                              padding: EdgeInsetsDirectional
+                                                  .fromSTEB(5.0, 5.0, 5.0, 5.0),
+                                              child: Container(
+                                                width: 30.0,
+                                                height: 30.0,
+                                                decoration: BoxDecoration(
+                                                  gradient: LinearGradient(
+                                                    colors: [
+                                                      Color(0xFF7E7E7E),
+                                                      Color(0xFF252525)
+                                                    ],
+                                                    stops: [0.0, 1.0],
+                                                    begin: AlignmentDirectional(
+                                                        0.0, -1.0),
+                                                    end: AlignmentDirectional(
+                                                        0, 1.0),
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(
+                                                          6.0),
+                                                  shape: BoxShape.rectangle,
+                                                ),
+                                                child: Align(
+                                                  alignment:
+                                                      AlignmentDirectional(
+                                                          0.0, 0.0),
+                                                  child: Text(
+                                                    '7.6',
+                                                    style: FlutterFlowTheme.of(
+                                                            context)
+                                                        .bodyMedium
+                                                        .override(
+                                                          font:
+                                                              GoogleFonts.inter(
+                                                            fontWeight:
+                                                                FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .bodyMedium
+                                                                    .fontWeight,
+                                                            fontStyle:
+                                                                FlutterFlowTheme.of(
+                                                                        context)
+                                                                    .bodyMedium
+                                                                    .fontStyle,
+                                                          ),
+                                                          letterSpacing: 0.0,
+                                                          fontWeight:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .bodyMedium
+                                                                  .fontWeight,
+                                                          fontStyle:
+                                                              FlutterFlowTheme.of(
+                                                                      context)
+                                                                  .bodyMedium
+                                                                  .fontStyle,
+                                                        ),
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
                                       );
                                     },
                                   );

@@ -1,5 +1,6 @@
 import '/components/auth_divider_widget.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import '/index.dart';
 import 'photo_detail_screen_widget.dart' show PhotoDetailScreenWidget;
 import 'package:flutter/material.dart';
 

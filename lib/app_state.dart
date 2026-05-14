@@ -26,6 +26,8 @@ class FFAppState extends ChangeNotifier {
     _selectedMediaId = value;
   }
 
+  ///
+  ///
   String _selectedMediaMetadata = '';
   String get selectedMediaMetadata => _selectedMediaMetadata;
   set selectedMediaMetadata(String value) {

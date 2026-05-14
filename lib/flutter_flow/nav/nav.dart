@@ -134,6 +134,11 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: SearchscreenWidget.routeName,
           path: SearchscreenWidget.routePath,
           builder: (context, params) => SearchscreenWidget(),
+        ),
+        FFRoute(
+          name: FullScreenImageViewerWidget.routeName,
+          path: FullScreenImageViewerWidget.routePath,
+          builder: (context, params) => FullScreenImageViewerWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );

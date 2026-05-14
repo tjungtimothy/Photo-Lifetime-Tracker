@@ -7,3 +7,4 @@ export 'profile_screen.dart' show ProfileScreen;
 export 'network_image_widget.dart' show NetworkImageWidget;
 export 'custom_sliver_search.dart' show CustomSliverSearch;
 export 'search_screen.dart' show SearchScreen;
+export 'full_screen_image_viewer.dart' show FullScreenImageViewer;

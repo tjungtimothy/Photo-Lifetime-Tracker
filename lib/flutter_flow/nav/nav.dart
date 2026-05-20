@@ -1,13 +1,20 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
+import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 
+import '/backend/supabase/supabase.dart';
 
 import '/auth/base_auth_user_provider.dart';
 
+import '/main.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
+import '/flutter_flow/lat_lng.dart';
+import '/flutter_flow/place.dart';
 import '/flutter_flow/flutter_flow_util.dart';
+import 'serialization_util.dart';
 
 import '/index.dart';
 
@@ -303,6 +310,16 @@ class FFRoute {
             final redirectLocation = appStateNotifier.getRedirectLocation();
             appStateNotifier.clearRedirectLocation();
             return redirectLocation;
+          }
+
+          // Special handling for the root route
+          if (name == '_initialize') {
+            // If user is logged in, redirect to home
+            if (appStateNotifier.loggedIn && !appStateNotifier.loading) {
+              return '/homeScreen';
+            }
+            // If user is not logged in and not loading, stay at root
+            return null;
           }
 
           if (requireAuth && !appStateNotifier.loggedIn) {

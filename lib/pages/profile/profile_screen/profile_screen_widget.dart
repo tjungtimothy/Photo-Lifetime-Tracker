@@ -25,6 +25,8 @@ class _ProfileScreenWidgetState extends State<ProfileScreenWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => ProfileScreenModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
@@ -44,13 +46,6 @@ class _ProfileScreenWidgetState extends State<ProfileScreenWidget> {
       child: Scaffold(
         key: scaffoldKey,
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-        appBar: AppBar(
-          backgroundColor: Color(0xFF181C1E),
-          automaticallyImplyLeading: true,
-          actions: [],
-          centerTitle: true,
-          elevation: 0.0,
-        ),
         body: SafeArea(
           top: true,
           child: Stack(

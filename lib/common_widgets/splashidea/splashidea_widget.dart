@@ -2,28 +2,28 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import 'package:flutter/material.dart';
-import 'login_screen_model.dart';
-export 'login_screen_model.dart';
+import 'splashidea_model.dart';
+export 'splashidea_model.dart';
 
-class LoginScreenWidget extends StatefulWidget {
-  const LoginScreenWidget({super.key});
+class SplashideaWidget extends StatefulWidget {
+  const SplashideaWidget({super.key});
 
-  static String routeName = 'login_screen';
-  static String routePath = '/loginScreen';
+  static String routeName = 'Splashidea';
+  static String routePath = '/splashidea';
 
   @override
-  State<LoginScreenWidget> createState() => _LoginScreenWidgetState();
+  State<SplashideaWidget> createState() => _SplashideaWidgetState();
 }
 
-class _LoginScreenWidgetState extends State<LoginScreenWidget> {
-  late LoginScreenModel _model;
+class _SplashideaWidgetState extends State<SplashideaWidget> {
+  late SplashideaModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => LoginScreenModel());
+    _model = createModel(context, () => SplashideaModel());
 
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
@@ -47,13 +47,17 @@ class _LoginScreenWidgetState extends State<LoginScreenWidget> {
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: SafeArea(
           top: true,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            child: custom_widgets.CustomLoginScreen(
-              width: double.infinity,
-              height: double.infinity,
-            ),
+          child: Stack(
+            children: [
+              Container(
+                width: double.infinity,
+                height: double.infinity,
+                child: custom_widgets.AestheticSplashScreen(
+                  width: double.infinity,
+                  height: double.infinity,
+                ),
+              ),
+            ],
           ),
         ),
       ),

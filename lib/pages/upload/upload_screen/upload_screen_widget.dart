@@ -1,3 +1,4 @@
+import '/auth/supabase_auth/auth_util.dart';
 import '/common_widgets/common_nav_bar/common_nav_bar_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
@@ -25,6 +26,8 @@ class _UploadScreenWidgetState extends State<UploadScreenWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => UploadScreenModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
@@ -39,13 +42,6 @@ class _UploadScreenWidgetState extends State<UploadScreenWidget> {
     return Scaffold(
       key: scaffoldKey,
       backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
-      appBar: AppBar(
-        backgroundColor: Color(0xFF181C1E),
-        automaticallyImplyLeading: true,
-        actions: [],
-        centerTitle: true,
-        elevation: 0.0,
-      ),
       body: SafeArea(
         top: true,
         child: Stack(
@@ -53,31 +49,38 @@ class _UploadScreenWidgetState extends State<UploadScreenWidget> {
             Container(
               width: double.infinity,
               height: double.infinity,
-              child: custom_widgets.UploadScreen(
+              child: custom_widgets.UploadCompetitionImage(
                 width: double.infinity,
                 height: double.infinity,
+                userId: currentUserUid,
+                userName: 'dadad',
+                preselectedContestId: '',
+                onSuccess: () async {},
               ),
             ),
-            Column(
-              mainAxisSize: MainAxisSize.max,
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                wrapWithModel(
-                  model: _model.commonNavBarModel,
-                  updateCallback: () => safeSetState(() {}),
-                  updateOnChange: true,
-                  child: Hero(
-                    tag: '',
-                    transitionOnUserGestures: true,
-                    child: Material(
-                      color: Colors.transparent,
-                      child: CommonNavBarWidget(
-                        navIndex: 1,
+            Align(
+              alignment: AlignmentDirectional(0.0, 0.0),
+              child: Column(
+                mainAxisSize: MainAxisSize.max,
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  wrapWithModel(
+                    model: _model.commonNavBarModel,
+                    updateCallback: () => safeSetState(() {}),
+                    updateOnChange: true,
+                    child: Hero(
+                      tag: '',
+                      transitionOnUserGestures: true,
+                      child: Material(
+                        color: Colors.transparent,
+                        child: CommonNavBarWidget(
+                          navIndex: 1,
+                        ),
                       ),
                     ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ],
         ),

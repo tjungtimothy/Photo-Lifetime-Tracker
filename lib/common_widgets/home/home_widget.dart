@@ -1,5 +1,5 @@
 import '/backend/supabase/supabase.dart';
-import '/components/auth_divider_widget.dart';
+import '/common_widgets/auth_divider/auth_divider_widget.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
@@ -30,6 +30,8 @@ class _HomeWidgetState extends State<HomeWidget> {
 
     _model.textController ??= TextEditingController();
     _model.textFieldFocusNode ??= FocusNode();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override

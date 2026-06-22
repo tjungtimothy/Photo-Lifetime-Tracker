@@ -43,7 +43,10 @@
 	<true/>
 
 
-
+	<key>NSCameraUsageDescription</key>
+    <string>Permission to access camera to uplad image.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+    <string>Permission to access  device images.</string>
 
 
 

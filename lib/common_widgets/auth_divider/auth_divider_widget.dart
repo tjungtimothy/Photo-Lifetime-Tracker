@@ -24,6 +24,8 @@ class _AuthDividerWidgetState extends State<AuthDividerWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => AuthDividerModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override

@@ -1,20 +1,13 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:page_transition/page_transition.dart';
 import 'package:provider/provider.dart';
 
-import '/backend/supabase/supabase.dart';
 
 import '/auth/base_auth_user_provider.dart';
 
-import '/main.dart';
 import '/flutter_flow/flutter_flow_theme.dart';
-import '/flutter_flow/lat_lng.dart';
-import '/flutter_flow/place.dart';
 import '/flutter_flow/flutter_flow_util.dart';
-import 'serialization_util.dart';
 
 import '/index.dart';
 
@@ -84,13 +77,14 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
       refreshListenable: appStateNotifier,
       navigatorKey: appNavigatorKey,
       errorBuilder: (context, state) =>
-          appStateNotifier.loggedIn ? HomeWidget() : SignupScreenWidget(),
+          appStateNotifier.loggedIn ? HomeScreenWidget() : SplashideaWidget(),
       routes: [
         FFRoute(
           name: '_initialize',
           path: '/',
-          builder: (context, _) =>
-              appStateNotifier.loggedIn ? HomeWidget() : SignupScreenWidget(),
+          builder: (context, _) => appStateNotifier.loggedIn
+              ? HomeScreenWidget()
+              : SplashideaWidget(),
         ),
         FFRoute(
           name: SplashScreenWidget.routeName,
@@ -146,6 +140,16 @@ GoRouter createRouter(AppStateNotifier appStateNotifier) => GoRouter(
           name: FullScreenImageViewerWidget.routeName,
           path: FullScreenImageViewerWidget.routePath,
           builder: (context, params) => FullScreenImageViewerWidget(),
+        ),
+        FFRoute(
+          name: SplashideaWidget.routeName,
+          path: SplashideaWidget.routePath,
+          builder: (context, params) => SplashideaWidget(),
+        ),
+        FFRoute(
+          name: EmailVerificationScreenWidget.routeName,
+          path: EmailVerificationScreenWidget.routePath,
+          builder: (context, params) => EmailVerificationScreenWidget(),
         )
       ].map((r) => r.toRoute(appStateNotifier)).toList(),
     );
@@ -312,19 +316,9 @@ class FFRoute {
             return redirectLocation;
           }
 
-          // Special handling for the root route
-          if (name == '_initialize') {
-            // If user is logged in, redirect to home
-            if (appStateNotifier.loggedIn && !appStateNotifier.loading) {
-              return '/homeScreen';
-            }
-            // If user is not logged in and not loading, stay at root
-            return null;
-          }
-
           if (requireAuth && !appStateNotifier.loggedIn) {
             appStateNotifier.setRedirectLocationIfUnset(state.uri.toString());
-            return '/signupScreen';
+            return '/splashidea';
           }
           return null;
         },

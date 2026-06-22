@@ -2,28 +2,30 @@ import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import 'package:flutter/material.dart';
-import 'login_screen_model.dart';
-export 'login_screen_model.dart';
+import 'email_verification_screen_model.dart';
+export 'email_verification_screen_model.dart';
 
-class LoginScreenWidget extends StatefulWidget {
-  const LoginScreenWidget({super.key});
+class EmailVerificationScreenWidget extends StatefulWidget {
+  const EmailVerificationScreenWidget({super.key});
 
-  static String routeName = 'login_screen';
-  static String routePath = '/loginScreen';
+  static String routeName = 'EmailVerificationScreen';
+  static String routePath = '/emailVerificationScreen';
 
   @override
-  State<LoginScreenWidget> createState() => _LoginScreenWidgetState();
+  State<EmailVerificationScreenWidget> createState() =>
+      _EmailVerificationScreenWidgetState();
 }
 
-class _LoginScreenWidgetState extends State<LoginScreenWidget> {
-  late LoginScreenModel _model;
+class _EmailVerificationScreenWidgetState
+    extends State<EmailVerificationScreenWidget> {
+  late EmailVerificationScreenModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => LoginScreenModel());
+    _model = createModel(context, () => EmailVerificationScreenModel());
 
     WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
@@ -47,12 +49,15 @@ class _LoginScreenWidgetState extends State<LoginScreenWidget> {
         backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
         body: SafeArea(
           top: true,
-          child: Container(
-            width: double.infinity,
-            height: double.infinity,
-            child: custom_widgets.CustomLoginScreen(
+          child: Align(
+            alignment: AlignmentDirectional(1.0, 0.0),
+            child: Container(
               width: double.infinity,
               height: double.infinity,
+              child: custom_widgets.EmailVerificationScreen(
+                width: double.infinity,
+                height: double.infinity,
+              ),
             ),
           ),
         ),

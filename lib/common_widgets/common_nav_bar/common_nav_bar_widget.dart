@@ -30,6 +30,8 @@ class _CommonNavBarWidgetState extends State<CommonNavBarWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => CommonNavBarModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
@@ -49,17 +51,49 @@ class _CommonNavBarWidgetState extends State<CommonNavBarWidget> {
         height: 80.0,
         currentIndex: widget.navIndex,
         onTap: (index) async {
-          if (index == 0 ? true : false) {
-            context.pushNamed(HomeScreenWidget.routeName);
+          if (index == 0) {
+            context.pushNamed(
+              HomeScreenWidget.routeName,
+              extra: <String, dynamic>{
+                '__transition_info__': TransitionInfo(
+                  hasTransition: true,
+                  transitionType: PageTransitionType.fade,
+                ),
+              },
+            );
           } else {
             if (index == 1) {
-              context.pushNamed(UploadScreenWidget.routeName);
+              context.pushNamed(
+                UploadScreenWidget.routeName,
+                extra: <String, dynamic>{
+                  '__transition_info__': TransitionInfo(
+                    hasTransition: true,
+                    transitionType: PageTransitionType.fade,
+                  ),
+                },
+              );
             } else {
               if (index == 2) {
-                context.pushNamed(ReportScreenWidget.routeName);
+                context.pushNamed(
+                  ReportScreenWidget.routeName,
+                  extra: <String, dynamic>{
+                    '__transition_info__': TransitionInfo(
+                      hasTransition: true,
+                      transitionType: PageTransitionType.fade,
+                    ),
+                  },
+                );
               } else {
                 if (index == 3) {
-                  context.pushNamed(ProfileScreenWidget.routeName);
+                  context.pushNamed(
+                    ProfileScreenWidget.routeName,
+                    extra: <String, dynamic>{
+                      '__transition_info__': TransitionInfo(
+                        hasTransition: true,
+                        transitionType: PageTransitionType.fade,
+                      ),
+                    },
+                  );
                 }
               }
             }

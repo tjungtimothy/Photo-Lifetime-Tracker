@@ -1,8 +1,8 @@
 import '/flutter_flow/flutter_flow_util.dart';
-import 'login_screen_widget.dart' show LoginScreenWidget;
+import 'splashidea_widget.dart' show SplashideaWidget;
 import 'package:flutter/material.dart';
 
-class LoginScreenModel extends FlutterFlowModel<LoginScreenWidget> {
+class SplashideaModel extends FlutterFlowModel<SplashideaWidget> {
   @override
   void initState(BuildContext context) {}
 

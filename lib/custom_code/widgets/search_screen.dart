@@ -1,6 +1,5 @@
 // Automatic FlutterFlow imports
 import '/backend/supabase/supabase.dart';
-import '/actions/actions.dart' as action_blocks;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'index.dart'; // Imports other custom widgets
@@ -97,8 +96,6 @@ class _SearchScreenState extends State<SearchScreen> {
     FFAppState().selectedMediaEntry = item['photo_address']?.toString() ?? '';
     FFAppState().selectedMediaDate = item['capture_date']?.toString() ?? '';
 
-    // ✅ Exactly yahi naam hai tumhara — screenshot mein dikh raha hai
-    // context.pushNamed('profile_screen');
     widget.onCardTap(mediaId);
   }
 
@@ -123,7 +120,7 @@ class _SearchScreenState extends State<SearchScreen> {
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
         decoration: BoxDecoration(
-          color: const Color(0x181C1E),
+          color: const Color(0xFF181C1E), // Fixed format hex color
           borderRadius: BorderRadius.circular(12),
           border: Border.all(color: Colors.white.withOpacity(0.07)),
         ),
@@ -248,15 +245,21 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
+    // FIX: Changed root to Container to apply the custom translucent background color #2C363AB2
+    return Container(
       width: widget.width ?? double.infinity,
       height: widget.height ?? double.infinity,
+      decoration: const BoxDecoration(
+        color: Color(
+            0xFF181C1E), // ARGB format for #2C363AB2 (B2 is opacity alpha)
+      ),
       child: Column(
         children: [
           // ── Search Bar ──
           Container(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-            color: const Color(0x181C1E),
+            color: Colors
+                .transparent, // Changed to transparent to let root background show cleanly
             child: Row(
               children: [
                 GestureDetector(

@@ -25,6 +25,8 @@ class _ReportScreenWidgetState extends State<ReportScreenWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => ReportScreenModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override

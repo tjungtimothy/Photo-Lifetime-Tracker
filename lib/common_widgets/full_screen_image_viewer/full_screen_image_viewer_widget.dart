@@ -1,30 +1,34 @@
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
-import '/index.dart';
 import 'package:flutter/material.dart';
-import 'searchscreen_model.dart';
-export 'searchscreen_model.dart';
+import 'package:provider/provider.dart';
+import 'full_screen_image_viewer_model.dart';
+export 'full_screen_image_viewer_model.dart';
 
-class SearchscreenWidget extends StatefulWidget {
-  const SearchscreenWidget({super.key});
+class FullScreenImageViewerWidget extends StatefulWidget {
+  const FullScreenImageViewerWidget({super.key});
 
-  static String routeName = 'searchscreen';
-  static String routePath = '/searchscreen';
+  static String routeName = 'FullScreenImageViewer';
+  static String routePath = '/fullScreenImageViewer';
 
   @override
-  State<SearchscreenWidget> createState() => _SearchscreenWidgetState();
+  State<FullScreenImageViewerWidget> createState() =>
+      _FullScreenImageViewerWidgetState();
 }
 
-class _SearchscreenWidgetState extends State<SearchscreenWidget> {
-  late SearchscreenModel _model;
+class _FullScreenImageViewerWidgetState
+    extends State<FullScreenImageViewerWidget> {
+  late FullScreenImageViewerModel _model;
 
   final scaffoldKey = GlobalKey<ScaffoldState>();
 
   @override
   void initState() {
     super.initState();
-    _model = createModel(context, () => SearchscreenModel());
+    _model = createModel(context, () => FullScreenImageViewerModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
@@ -36,6 +40,8 @@ class _SearchscreenWidgetState extends State<SearchscreenWidget> {
 
   @override
   Widget build(BuildContext context) {
+    context.watch<FFAppState>();
+
     return GestureDetector(
       onTap: () {
         FocusScope.of(context).unfocus();
@@ -49,12 +55,10 @@ class _SearchscreenWidgetState extends State<SearchscreenWidget> {
           child: Container(
             width: double.infinity,
             height: double.infinity,
-            child: custom_widgets.SearchScreen(
+            child: custom_widgets.FullScreenImageViewer(
               width: double.infinity,
               height: double.infinity,
-              onCardTap: (mediaId) async {
-                context.pushNamed(PhotoDetailScreenWidget.routeName);
-              },
+              imageUrl: FFAppState().selectedMediaFileUrl,
             ),
           ),
         ),

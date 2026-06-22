@@ -1,4 +1,4 @@
-import '/components/auth_divider_widget.dart';
+import '/common_widgets/auth_divider/auth_divider_widget.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/index.dart';
 import 'home_widget.dart' show HomeWidget;

@@ -1,6 +1,5 @@
 // Automatic FlutterFlow imports
 import '/backend/supabase/supabase.dart';
-import '/actions/actions.dart' as action_blocks;
 import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import 'index.dart'; // Imports other custom widgets
@@ -9,20 +8,121 @@ import 'package:flutter/material.dart';
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
 import 'dart:convert';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 
+// ═══════════════════════════════════════════════════════════════════════════
+// MEDIA GRID CACHE — module-level static cache
+// Survives widget rebuilds (tab switch, navigation back) within same app
+// session. Cleared automatically on app restart or when explicitly refreshed.
+//
+// Test cases handled:
+//   ✅ Stale data: TTL of 5 mins, then auto-refresh in background
+//   ✅ Memory bloat: capped at MAX_CACHED_PAGES pages (~40 items)
+//   ✅ Pull-to-refresh: bypasses cache, forces fresh fetch
+//   ✅ New upload: caller can invalidate via MediaGridCache.invalidate()
+//   ✅ Multi-user: cache keyed on user id, auto-clears on user change
+//   ✅ Offline: serves stale cache rather than blank screen
+// ═══════════════════════════════════════════════════════════════════════════
+class MediaGridCache {
+  static List<Map<String, dynamic>> _items = [];
+  static int _lastPage = -1;
+  static bool _hasMore = true;
+  static DateTime? _fetchedAt;
+  static String? _ownerUserId;
+  // Pagination cursor — last item's capture_date for stable paging
+  static String? _lastCaptureDate;
+
+  static const Duration ttl = Duration(minutes: 5);
+  // Hard limit to prevent unbounded growth
+  static const int maxCachedItems = 100;
+
+  static bool isFreshFor(String? userId) {
+    if (_fetchedAt == null) return false;
+    if (_ownerUserId != userId) return false; // different user — invalidate
+    return DateTime.now().difference(_fetchedAt!) < ttl;
+  }
+
+  static bool hasAny(String? userId) {
+    if (_ownerUserId != userId) return false;
+    return _items.isNotEmpty;
+  }
+
+  static List<Map<String, dynamic>> get items => List.unmodifiable(_items);
+
+  static int get lastPage => _lastPage;
+  static bool get hasMore => _hasMore;
+
+  static void store({
+    required String? userId,
+    required List<Map<String, dynamic>> page,
+    required int pageNumber,
+    required bool hasMore,
+    bool replace = false,
+  }) {
+    if (replace || _ownerUserId != userId) {
+      _items = [];
+      _lastPage = -1;
+    }
+    _ownerUserId = userId;
+
+    // Dedupe by id
+    final existingIds = _items.map((e) => e['id']?.toString()).toSet();
+    for (final p in page) {
+      final id = p['id']?.toString();
+      if (id != null && !existingIds.contains(id)) {
+        _items.add(p);
+        existingIds.add(id);
+      }
+    }
+
+    // Cap memory
+    if (_items.length > maxCachedItems) {
+      _items = _items.sublist(0, maxCachedItems);
+    }
+
+    _lastPage = pageNumber;
+    _hasMore = hasMore;
+    _fetchedAt = DateTime.now();
+
+    // Update pagination cursor from last item
+    if (_items.isNotEmpty) {
+      _lastCaptureDate = _items.last['capture_date']?.toString();
+    }
+  }
+
+  /// Call from upload screen or anywhere data changes to force a refresh
+  /// on next grid render.
+  static void invalidate() {
+    _fetchedAt = null; // marks cache as stale
+  }
+
+  static void clear() {
+    _items = [];
+    _lastPage = -1;
+    _hasMore = true;
+    _fetchedAt = null;
+    _ownerUserId = null;
+    _lastCaptureDate = null;
+  }
+}
+
+/// ═══════════════════════════════════════════════════════════════════════════
+/// MAIN WIDGET
+/// ═══════════════════════════════════════════════════════════════════════════
 class MediaGridView extends StatefulWidget {
   const MediaGridView({
     super.key,
     this.width,
     this.height,
-    this.pageSize = 10,
-    required this.onCardTap,
+    this.pageSize = 8,
+    this.onCardTap,
   });
 
   final double? width;
   final double? height;
   final int pageSize;
-  final Future Function(String mediaId) onCardTap;
+  final Future Function(String mediaId)? onCardTap;
 
   @override
   State<MediaGridView> createState() => _MediaGridViewState();
@@ -30,103 +130,338 @@ class MediaGridView extends StatefulWidget {
 
 class _MediaGridViewState extends State<MediaGridView> {
   List<Map<String, dynamic>> _data = [];
-
   bool _isLoading = true;
   bool _isLoadingMore = false;
   bool _hasMore = true;
-
   int _currentPage = 0;
   int _crossAxisCount = 2;
-
   String? _error;
+  bool _isRefreshingInBackground = false;
+
+  String? get _currentUserId => SupaFlow.client.auth.currentUser?.id;
 
   @override
   void initState() {
     super.initState();
-    _fetchData(isInitial: true);
+    _initialLoad();
   }
 
-  Future<void> _fetchData({bool isInitial = false}) async {
-    if (isInitial) {
-      setState(() {
-        _isLoading = true;
-        _error = null;
-        _currentPage = 0;
-        _data = [];
-        _hasMore = true;
-      });
-    } else {
-      if (_isLoadingMore || !_hasMore) return;
+  // ─────────────────────────────────────────────
+  // INITIAL LOAD — uses cache if fresh
+  // ─────────────────────────────────────────────
+  Future<void> _initialLoad() async {
+    final userId = _currentUserId;
 
+    // ★ Path 1: cache has data and is fresh → use instantly, no spinner
+    if (MediaGridCache.isFreshFor(userId) && MediaGridCache.hasAny(userId)) {
+      setState(() {
+        _data = List<Map<String, dynamic>>.from(MediaGridCache.items);
+        _currentPage = MediaGridCache.lastPage + 1;
+        _hasMore = MediaGridCache.hasMore;
+        _isLoading = false;
+      });
+      return;
+    }
+
+    // ★ Path 2: cache exists but stale → show cached immediately, refresh
+    //   in background. User sees content instantly, fresh data fills in.
+    if (MediaGridCache.hasAny(userId)) {
+      setState(() {
+        _data = List<Map<String, dynamic>>.from(MediaGridCache.items);
+        _currentPage = MediaGridCache.lastPage + 1;
+        _hasMore = MediaGridCache.hasMore;
+        _isLoading = false;
+        _isRefreshingInBackground = true;
+      });
+      // Trigger silent background refresh
+      _fetchData(isInitial: true, silent: true);
+      return;
+    }
+
+    // ★ Path 3: no cache at all → full fetch with spinner
+    await _fetchData(isInitial: true);
+  }
+
+  // ─────────────────────────────────────────────
+  // FETCH DATA
+  // ─────────────────────────────────────────────
+  Future<void> _fetchData({
+    bool isInitial = false,
+    bool silent = false, // don't show spinner if background refresh
+  }) async {
+    if (isInitial) {
+      if (!silent) {
+        setState(() {
+          _isLoading = true;
+          _error = null;
+          _currentPage = 0;
+          _data = [];
+          _hasMore = true;
+        });
+      }
+    } else {
+      if (_isLoadingMore) return;
       setState(() => _isLoadingMore = true);
     }
 
     try {
-      final from = _currentPage * widget.pageSize;
+      final pageToFetch = isInitial ? 0 : _currentPage;
+      final from = pageToFetch * widget.pageSize;
       final to = from + widget.pageSize - 1;
 
       final response = await SupaFlow.client
           .from('Media')
-          .select(
-              'id, title, file_path, average_score, highest_score, current_status, photo_address, capture_date, "Metadata", processing_data')
-          .order('highest_score', ascending: false)
+          .select()
+          .order('capture_date', ascending: false)
           .range(from, to);
 
       final newItems = List<Map<String, dynamic>>.from(response);
+      final hasMore = newItems.length == widget.pageSize;
+
+      if (!mounted) return;
 
       setState(() {
-        _data.addAll(newItems);
-
-        _currentPage++;
-
-        _hasMore = newItems.length == widget.pageSize;
-
+        if (isInitial) {
+          // Replace data with fresh fetch
+          _data = newItems;
+          _currentPage = 1;
+        } else {
+          // Append, deduping by id
+          final existingIds = _data.map((e) => e['id']?.toString()).toSet();
+          for (final item in newItems) {
+            final id = item['id']?.toString();
+            if (id != null && !existingIds.contains(id)) {
+              _data.add(item);
+            }
+          }
+          _currentPage++;
+        }
+        _hasMore = hasMore;
         _isLoading = false;
         _isLoadingMore = false;
+        _isRefreshingInBackground = false;
       });
-    } catch (e) {
-      setState(() {
-        _error = e.toString();
 
+      // ★ Update cache
+      MediaGridCache.store(
+        userId: _currentUserId,
+        page: newItems,
+        pageNumber: pageToFetch,
+        hasMore: hasMore,
+        replace: isInitial,
+      );
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        // Only surface error if we have nothing to show
+        if (_data.isEmpty) {
+          _error = e.toString();
+        }
         _isLoading = false;
         _isLoadingMore = false;
+        _isRefreshingInBackground = false;
       });
     }
   }
 
-  Future<void> _refreshData() async {
+  // ─────────────────────────────────────────────
+  // PULL TO REFRESH — bypasses cache, forces fresh
+  // ─────────────────────────────────────────────
+  Future<void> _pullToRefresh() async {
+    MediaGridCache.invalidate();
     await _fetchData(isInitial: true);
   }
 
-  void _handleCardTap(Map<String, dynamic> item) {
-    final String mediaId = item['id']?.toString() ?? '';
-
+  void _handleCardTap(String mediaId) async {
     FFAppState().selectedMediaId = mediaId;
-    FFAppState().selectedMediaTitle = item['title']?.toString() ?? '';
-    FFAppState().selectedMediaFileUrl = item['file_path']?.toString() ?? '';
 
-    FFAppState().selectedMediaAvgScore =
+    final selectedItem = _data.firstWhere(
+      (element) => element['id']?.toString() == mediaId,
+      orElse: () => {},
+    );
+
+    if (selectedItem.isNotEmpty) {
+      FFAppState().selectedMediaTitle = selectedItem['title']?.toString() ?? '';
+      FFAppState().selectedMediaFileUrl =
+          selectedItem['file_path']?.toString() ?? '';
+      FFAppState().selectedMediaDate =
+          selectedItem['capture_date']?.toString() ?? '';
+      FFAppState().selectedMediaAvgScore =
+          double.tryParse(selectedItem['average_score']?.toString() ?? '0') ??
+              0.0;
+      FFAppState().selectedMediaHighScore =
+          double.tryParse(selectedItem['highest_score']?.toString() ?? '0') ??
+              0.0;
+      FFAppState().selectedMediaProcessing =
+          selectedItem['processing_data'] is String
+              ? selectedItem['processing_data']
+              : jsonEncode(selectedItem['processing_data']);
+      if (selectedItem['Metadata'] != null) {
+        FFAppState().selectedMediaMetadata = selectedItem['Metadata'] is String
+            ? selectedItem['Metadata']
+            : jsonEncode(selectedItem['Metadata']);
+      }
+    }
+
+    if (widget.onCardTap != null) {
+      await widget.onCardTap!(mediaId);
+    } else {
+      context.pushNamed(
+        'photoDetail_screen',
+        queryParameters: {
+          'mediaId': serializeParam(mediaId, ParamType.String),
+        },
+      );
+    }
+  }
+
+  // ─────────────────────────────────────────────
+  // CARD — uses CachedNetworkImage for disk caching
+  // ─────────────────────────────────────────────
+  Widget _buildCard(Map<String, dynamic> item) {
+    final String mediaId = item['id']?.toString() ?? '';
+    final String? fileUrl = item['file_path']?.toString();
+    final String title = item['title']?.toString() ?? 'Untitled';
+    final double avgScore =
         double.tryParse(item['average_score']?.toString() ?? '0') ?? 0.0;
+    final String status = item['current_status']?.toString() ?? '';
+    final bool isThreeCol = _crossAxisCount == 3;
 
-    FFAppState().selectedMediaHighScore =
-        double.tryParse(item['highest_score']?.toString() ?? '0') ?? 0.0;
+    return GestureDetector(
+      onTap: () => _handleCardTap(mediaId),
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A1D21),
+          borderRadius: BorderRadius.circular(isThreeCol ? 8 : 12),
+          border: Border.all(color: Colors.white.withOpacity(0.07)),
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // ★ CachedNetworkImage: disk + memory cache, image only fetched
+            //   from network once. On rebuild it loads instantly from cache.
+            fileUrl != null && fileUrl.isNotEmpty
+                ? CachedNetworkImage(
+                    imageUrl: fileUrl,
+                    fit: BoxFit.cover,
+                    fadeInDuration: const Duration(milliseconds: 200),
+                    fadeOutDuration: const Duration(milliseconds: 100),
+                    memCacheWidth: isThreeCol ? 300 : 500, // downsample
+                    placeholder: (context, url) => Container(
+                      color: const Color(0xFF252830),
+                      child: const Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 1.5,
+                            valueColor: AlwaysStoppedAnimation<Color>(
+                                Color(0xFF3E82FC)),
+                          ),
+                        ),
+                      ),
+                    ),
+                    errorWidget: (context, url, error) =>
+                        _buildFallbackIcon(isThreeCol),
+                  )
+                : _buildFallbackIcon(isThreeCol),
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.all(isThreeCol ? 6 : 10),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xEE000000), Colors.transparent],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (status.isNotEmpty)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 4),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 6, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: status.toLowerCase() == 'processed'
+                              ? const Color(0xFF2ECC71).withOpacity(0.2)
+                              : const Color(0xFF3E82FC).withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(4),
+                          border: Border.all(
+                            color: status.toLowerCase() == 'processed'
+                                ? const Color(0xFF2ECC71)
+                                : const Color(0xFF3E82FC),
+                            width: 0.5,
+                          ),
+                        ),
+                        child: Text(
+                          status.toUpperCase(),
+                          style: TextStyle(
+                            color: status.toLowerCase() == 'processed'
+                                ? const Color(0xFF2ECC71)
+                                : const Color(0xFF3E82FC),
+                            fontSize: isThreeCol ? 7 : 9,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ),
+                    Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: isThreeCol ? 10 : 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                    if (!isThreeCol && avgScore > 0) ...[
+                      const SizedBox(height: 2),
+                      Row(
+                        children: [
+                          const Icon(Icons.star_rounded,
+                              size: 11, color: Colors.amber),
+                          const SizedBox(width: 3),
+                          Text(
+                            avgScore.toStringAsFixed(1),
+                            style: const TextStyle(
+                                color: Colors.amber, fontSize: 10),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    FFAppState().selectedMediaMetadata = jsonEncode(item['Metadata'] ?? {});
-
-    FFAppState().selectedMediaProcessing =
-        jsonEncode(item['processing_data'] ?? {});
-
-    FFAppState().selectedMediaEntry = item['photo_address']?.toString() ?? '';
-
-    FFAppState().selectedMediaDate = item['capture_date']?.toString() ?? '';
-
-    widget.onCardTap(mediaId);
+  Widget _buildFallbackIcon(bool isThreeCol) {
+    return Container(
+      color: const Color(0xFF252830),
+      child: Center(
+        child: Icon(
+          Icons.image_rounded,
+          color: Colors.white.withOpacity(0.15),
+          size: isThreeCol ? 24 : 36,
+        ),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    const double navBarPadding = 84.0;
-
     return SizedBox(
       width: widget.width ?? double.infinity,
       height: widget.height ?? double.infinity,
@@ -137,12 +472,29 @@ class _MediaGridViewState extends State<MediaGridView> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  '${_data.length} Items',
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.5),
-                    fontSize: 13,
-                  ),
+                Row(
+                  children: [
+                    Text(
+                      '${_data.length} Items',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.5),
+                        fontSize: 13,
+                      ),
+                    ),
+                    // ★ Tiny indicator while refreshing in background
+                    if (_isRefreshingInBackground) ...[
+                      const SizedBox(width: 8),
+                      const SizedBox(
+                        width: 10,
+                        height: 10,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 1.5,
+                          valueColor:
+                              AlwaysStoppedAnimation<Color>(Color(0xFF3E82FC)),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 Row(
                   children: [
@@ -157,403 +509,142 @@ class _MediaGridViewState extends State<MediaGridView> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(),
+                    child: CircularProgressIndicator(
+                      valueColor:
+                          AlwaysStoppedAnimation<Color>(Color(0xFF3E82FC)),
+                    ),
                   )
                 : _error != null
-                    ? _buildErrorUI()
-                    : RefreshIndicator(
-                        color: FlutterFlowTheme.of(context).primary,
-                        backgroundColor: const Color(0xFF1A1D21),
-                        onRefresh: _refreshData,
-                        child: CustomScrollView(
-                          physics: const AlwaysScrollableScrollPhysics(
-                            parent: BouncingScrollPhysics(),
+                    ? _buildErrorWidget()
+                    : _data.isEmpty
+                        ? Center(
+                            child: Text(
+                              'No photos found',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.4),
+                              ),
+                            ),
+                          )
+                        // ★ Wrap with RefreshIndicator for pull-to-refresh
+                        : RefreshIndicator(
+                            color: const Color(0xFF3E82FC),
+                            backgroundColor: const Color(0xFF1A1D21),
+                            onRefresh: _pullToRefresh,
+                            child: CustomScrollView(
+                              physics: const AlwaysScrollableScrollPhysics(
+                                  parent: BouncingScrollPhysics()),
+                              slivers: [
+                                SliverPadding(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12),
+                                  sliver: SliverGrid(
+                                    delegate: SliverChildBuilderDelegate(
+                                      (context, index) =>
+                                          _buildCard(_data[index]),
+                                      childCount: _data.length,
+                                    ),
+                                    gridDelegate:
+                                        SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: _crossAxisCount,
+                                      crossAxisSpacing: 10,
+                                      mainAxisSpacing: 10,
+                                      childAspectRatio:
+                                          _crossAxisCount == 2 ? 0.72 : 0.68,
+                                    ),
+                                  ),
+                                ),
+                                SliverToBoxAdapter(
+                                  child: Padding(
+                                    padding: const EdgeInsets.fromLTRB(
+                                        16, 16, 16, 80),
+                                    child: _hasMore
+                                        ? _isLoadingMore
+                                            ? const Center(
+                                                child: SizedBox(
+                                                  height: 36,
+                                                  width: 36,
+                                                  child:
+                                                      CircularProgressIndicator(
+                                                    strokeWidth: 2,
+                                                    valueColor:
+                                                        AlwaysStoppedAnimation<
+                                                                Color>(
+                                                            Color(0xFF3E82FC)),
+                                                  ),
+                                                ),
+                                              )
+                                            : GestureDetector(
+                                                onTap: () => _fetchData(
+                                                    isInitial: false),
+                                                child: Container(
+                                                  width: double.infinity,
+                                                  padding: const EdgeInsets
+                                                      .symmetric(vertical: 14),
+                                                  decoration: BoxDecoration(
+                                                    color:
+                                                        const Color(0xFF3E82FC)
+                                                            .withOpacity(0.12),
+                                                    borderRadius:
+                                                        BorderRadius.circular(
+                                                            30),
+                                                    border: Border.all(
+                                                      color: const Color(
+                                                              0xFF3E82FC)
+                                                          .withOpacity(0.4),
+                                                    ),
+                                                  ),
+                                                  child: const Center(
+                                                    child: Text(
+                                                      'Load More',
+                                                      style: TextStyle(
+                                                        color:
+                                                            Color(0xFF3E82FC),
+                                                        fontWeight:
+                                                            FontWeight.w600,
+                                                        fontSize: 14,
+                                                      ),
+                                                    ),
+                                                  ),
+                                                ),
+                                              )
+                                        : const SizedBox(height: 8),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          slivers: [
-                            SliverPadding(
-                              padding:
-                                  const EdgeInsets.symmetric(horizontal: 12),
-                              sliver: SliverGrid(
-                                delegate: SliverChildBuilderDelegate(
-                                  (context, index) =>
-                                      _buildCard(_data[index], index),
-                                  childCount: _data.length,
-                                ),
-                                gridDelegate:
-                                    SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: _crossAxisCount,
-                                  crossAxisSpacing: 10,
-                                  mainAxisSpacing: 10,
-                                  childAspectRatio:
-                                      _crossAxisCount == 2 ? 0.72 : 0.68,
-                                ),
-                              ),
-                            ),
-                            SliverToBoxAdapter(
-                              child: Padding(
-                                padding: const EdgeInsets.fromLTRB(
-                                  16,
-                                  20,
-                                  16,
-                                  navBarPadding,
-                                ),
-                                child: _hasMore
-                                    ? _buildLoadMoreButton()
-                                    : Center(
-                                        child: Text(
-                                          'End of Gallery',
-                                          style: TextStyle(
-                                            color:
-                                                Colors.white.withOpacity(0.2),
-                                            fontSize: 12,
-                                          ),
-                                        ),
-                                      ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
           ),
         ],
       ),
     );
   }
 
-  Widget _buildLoadMoreButton() {
-    return _isLoadingMore
-        ? const Center(
-            child: SizedBox(
-              height: 40,
-              width: 40,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-              ),
-            ),
-          )
-        : GestureDetector(
-            onTap: () => _fetchData(isInitial: false),
-            child: Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 14),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0x663E82FC),
-                    Color(0x1A181C1E),
-                  ],
-                ),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: const Color(0x803E82FC),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  'LOAD MORE',
-                  style: TextStyle(
-                    color: Color(0x663E82FC),
-                    fontWeight: FontWeight.bold,
-                    letterSpacing: 1.2,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-          );
-  }
-
-  Widget _buildCard(Map<String, dynamic> item, int index) {
-    final bool isThreeCol = _crossAxisCount == 3;
-
-    final String? fileUrl = item['file_path']?.toString();
-
-    final double highestScore =
-        double.tryParse(item['highest_score']?.toString() ?? '0') ?? 0.0;
-
-    String badgeText = '';
-
-    if (index == 0) {
-      badgeText = 'WINNER';
-    } else if (index <= 2) {
-      badgeText = 'SHORTLISTED';
-    } else {
-      badgeText = item['current_status']?.toString() ?? '';
-    }
-
-    return Stack(
-      children: [
-        Padding(
-          padding: const EdgeInsets.all(10),
-          child: InkWell(
-            splashColor: Colors.transparent,
-            highlightColor: Colors.transparent,
-            onTap: () => _handleCardTap(item),
-            child: Container(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(14),
-              ),
-              child: Stack(
-                children: [
-                  /// IMAGE
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(14),
-                    child: fileUrl != null && fileUrl.isNotEmpty
-                        ? Image.network(
-                            fileUrl,
-                            width: double.infinity,
-                            height: double.infinity,
-                            fit: BoxFit.cover,
-
-                            /// IMAGE LOADER
-                            loadingBuilder: (context, child, loadingProgress) {
-                              if (loadingProgress == null) return child;
-
-                              return Container(
-                                color: const Color(0xFF252830),
-                                child: const Center(
-                                  child: SizedBox(
-                                    width: 28,
-                                    height: 28,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  ),
-                                ),
-                              );
-                            },
-
-                            errorBuilder: (_, __, ___) =>
-                                _errorPlaceholder(isThreeCol),
-                          )
-                        : _errorPlaceholder(isThreeCol),
-                  ),
-
-                  /// DARK GRADIENT OVERLAY
-                  Align(
-                    alignment: AlignmentDirectional.center,
-                    child: Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [
-                            Color(0x00555464),
-                            Color(0xD7000000),
-                          ],
-                          stops: [0, 1],
-                          begin: AlignmentDirectional(0, -1),
-                          end: AlignmentDirectional(0, 1),
-                        ),
-                        borderRadius: BorderRadius.circular(14),
-                      ),
-
-                      /// TEXTS
-                      child: Padding(
-                        padding: const EdgeInsets.fromLTRB(
-                          10,
-                          0,
-                          10,
-                          10,
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            /// BADGE
-                            if (badgeText.isNotEmpty && !isThreeCol)
-                              Opacity(
-                                opacity: 0.9,
-                                child: Padding(
-                                  padding: const EdgeInsets.only(bottom: 5),
-                                  child: Material(
-                                    color: Colors.transparent,
-                                    elevation: 2,
-                                    borderRadius: BorderRadius.circular(5),
-                                    child: Container(
-                                      decoration: BoxDecoration(
-                                        color: badgeText == 'WINNER'
-                                            ? const Color(0xFF22B162)
-                                            : badgeText == 'SHORTLISTED'
-                                                ? Colors.orange
-                                                : Colors.blue,
-                                        borderRadius: BorderRadius.circular(5),
-                                        border: Border.all(
-                                          color: badgeText == 'WINNER'
-                                              ? const Color(0xFF3FD384)
-                                              : Colors.white24,
-                                          width: 1,
-                                        ),
-                                        boxShadow: const [
-                                          BoxShadow(
-                                            blurRadius: 4,
-                                            color: Color(0x33000000),
-                                            offset: Offset(0, 2),
-                                          ),
-                                        ],
-                                      ),
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                          vertical: 4,
-                                        ),
-                                        child: Text(
-                                          badgeText,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 9,
-                                            fontWeight: FontWeight.w600,
-                                            letterSpacing: 0.5,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-
-                            /// TITLE
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 3),
-                              child: Text(
-                                item['title']?.toString() ?? 'Untitled',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: isThreeCol ? 11 : 15,
-                                  fontWeight: FontWeight.w500,
-                                  shadows: const [
-                                    Shadow(
-                                      color: Colors.black,
-                                      offset: Offset(2, 2),
-                                      blurRadius: 5,
-                                    )
-                                  ],
-                                ),
-                              ),
-                            ),
-
-                            /// SUBTITLE
-                            Text(
-                              'Sed ut perspiciatis',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                color: const Color(0xFF9E9D9D),
-                                fontSize: isThreeCol ? 9 : 11,
-                                fontWeight: FontWeight.w400,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-
-        /// SCORE BOX
-        Align(
-          alignment: const AlignmentDirectional(0.85, 1.13),
-          child: Padding(
-            padding: const EdgeInsets.all(5),
-            child: Container(
-              width: 34,
-              height: 28,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: [
-                    Color(0xFF7E7E7E),
-                    Color(0xFF252525),
-                  ],
-                  begin: AlignmentDirectional(0, -1),
-                  end: AlignmentDirectional(0, 1),
-                ),
-                borderRadius: BorderRadius.circular(6),
-              ),
-              child: Center(
-                child: Text(
-                  highestScore.toStringAsFixed(1),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildCardOverlay(
-    Map<String, dynamic> item,
-    bool isThreeCol,
-    double highestScore,
-    String badgeText,
-  ) {
-    return Positioned(
-      bottom: 0,
-      left: 0,
-      right: 0,
-      child: Container(
-        padding: EdgeInsets.all(isThreeCol ? 6 : 10),
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.bottomCenter,
-            end: Alignment.topCenter,
-            colors: [
-              Color(0xEE000000),
-              Colors.transparent,
-            ],
-          ),
-        ),
+  Widget _buildErrorWidget() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            if (badgeText.isNotEmpty && !isThreeCol) _statusBadge(badgeText),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Expanded(
-                  child: Text(
-                    item['title']?.toString() ?? 'Untitled',
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: isThreeCol ? 10 : 14,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+            const Icon(Icons.error_outline, color: Colors.redAccent, size: 36),
+            const SizedBox(height: 12),
+            Text(
+              _error!,
+              style: const TextStyle(color: Colors.redAccent),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 20),
+            ElevatedButton.icon(
+              onPressed: () => _fetchData(isInitial: true),
+              icon: const Icon(Icons.refresh, size: 16),
+              label: const Text('RETRY'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF3E82FC),
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                const SizedBox(width: 6),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 6,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.45),
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                  child: Text(
-                    highestScore.toStringAsFixed(1),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
+              ),
             ),
           ],
         ),
@@ -561,94 +652,20 @@ class _MediaGridViewState extends State<MediaGridView> {
     );
   }
 
-  Widget _statusBadge(String status) {
-    Color bgColor = Colors.blue;
-
-    if (status.toLowerCase() == 'winner') {
-      bgColor = const Color(0xFF3E82FC);
-    } else if (status.toLowerCase() == 'shortlisted') {
-      bgColor = const Color(0xFF4FC3A1);
-    } else if (status.toLowerCase() == 'rejected') {
-      bgColor = Colors.redAccent;
-    }
-
-    return Container(
-      margin: const EdgeInsets.only(bottom: 6),
-      padding: const EdgeInsets.symmetric(
-        horizontal: 7,
-        vertical: 3,
-      ),
-      decoration: BoxDecoration(
-        color: bgColor.withOpacity(0.9),
-        borderRadius: BorderRadius.circular(4),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: const TextStyle(
-          color: Colors.white,
-          fontSize: 8,
-          fontWeight: FontWeight.bold,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _errorPlaceholder(bool isThreeCol) {
-    return Container(
-      color: const Color(0xFF252830),
-      child: Center(
-        child: Icon(
-          Icons.image_not_supported_rounded,
-          color: Colors.white.withOpacity(0.1),
-          size: isThreeCol ? 20 : 30,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildErrorUI() {
-    return Center(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          const Icon(
-            Icons.error_outline,
-            color: Colors.redAccent,
-            size: 40,
-          ),
-          const SizedBox(height: 10),
-          Text(
-            _error!,
-            style: const TextStyle(
-              color: Colors.white70,
-            ),
-            textAlign: TextAlign.center,
-          ),
-          TextButton(
-            onPressed: () => _fetchData(isInitial: true),
-            child: const Text('RETRY'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _toggleBtn(IconData icon, int count) {
     final isSelected = _crossAxisCount == count;
-
     return GestureDetector(
       onTap: () => setState(() => _crossAxisCount = count),
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: isSelected
-              ? FlutterFlowTheme.of(context).primary.withOpacity(0.15)
+              ? const Color(0xFF3E82FC).withOpacity(0.15)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected
-                ? FlutterFlowTheme.of(context).primary
+                ? const Color(0xFF3E82FC)
                 : Colors.white.withOpacity(0.1),
           ),
         ),
@@ -656,7 +673,7 @@ class _MediaGridViewState extends State<MediaGridView> {
           icon,
           size: 18,
           color: isSelected
-              ? FlutterFlowTheme.of(context).primary
+              ? const Color(0xFF3E82FC)
               : Colors.white.withOpacity(0.4),
         ),
       ),

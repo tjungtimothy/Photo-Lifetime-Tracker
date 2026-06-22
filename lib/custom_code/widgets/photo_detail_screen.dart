@@ -7,55 +7,85 @@ import 'package:flutter/material.dart';
 // Begin custom widget code
 // DO NOT REMOVE OR MODIFY THE CODE ABOVE!
 
-import '/custom_code/widgets/index.dart' as custom_widgets;
-
 import 'dart:convert';
+import 'dart:ui';
 
-class MediaDetailTabs extends StatefulWidget {
-  const MediaDetailTabs({
+// ════════════════════════════════════════════════════════════════════════════
+// PHOTO DETAIL SCREEN — unified sliver widget
+// ════════════════════════════════════════════════════════════════════════════
+// Architecture:
+//   CustomScrollView
+//   ├─ SliverAppBar (collapsing image header + back button)
+//   ├─ SliverPersistentHeader (title + maker name)
+//   ├─ SliverPersistentHeader (metadata strip)
+//   ├─ SliverPersistentHeader (PINNED tab bar)
+//   └─ SliverList (tab content)
+//
+// As you scroll:
+//   - Image fades out smoothly
+//   - Back button stays at top (system area)
+//   - Tab bar pins at top when reached
+//   - Content scrolls freely underneath
+// ════════════════════════════════════════════════════════════════════════════
+
+class PhotoDetailScreen extends StatefulWidget {
+  const PhotoDetailScreen({
     super.key,
     this.width,
     this.height,
     required this.mediaId,
+    required this.imageUrl,
+    this.title,
+    this.makerName,
+    this.makerTagline,
     this.averageScore,
     this.highestScore,
     this.metadataJson,
     this.processingDataJson,
     this.entryNumber,
     this.captureDate,
-    this.selectedMediaFileUrl,
-    this.entriesJson, // NEW: pre-fetched entries from FlutterFlow page (optional)
-    this.makerName, // NEW: photographer name (e.g. "Rick A. Thompson")
-    this.makerTagline, // NEW: tagline / status
+    this.entriesJson,
+    this.onBack,
   });
 
   final double? width;
   final double? height;
   final String mediaId;
-  final String? selectedMediaFileUrl;
+  final String imageUrl;
+  final String? title;
+  final String? makerName;
+  final String? makerTagline;
   final double? averageScore;
   final double? highestScore;
   final String? metadataJson;
   final String? processingDataJson;
   final String? entryNumber;
   final String? captureDate;
-  final String? entriesJson; // JSON list of v_media_competition_entries rows
-  final String? makerName;
-  final String? makerTagline;
+  final String? entriesJson;
+  final Future<dynamic> Function()? onBack;
 
   @override
-  State<MediaDetailTabs> createState() => _MediaDetailTabsState();
+  State<PhotoDetailScreen> createState() => _PhotoDetailScreenState();
 }
 
-class _MediaDetailTabsState extends State<MediaDetailTabs> {
+class _PhotoDetailScreenState extends State<PhotoDetailScreen> {
   int _selectedTab = 0;
-  bool _showFullProcessing = false;
   bool _showFullHistory = false;
 
-  // Entries state — fetched from Supabase view if not passed in
+  // Entries
   List<Map<String, dynamic>>? _entries;
   bool _entriesLoading = false;
   String? _entriesError;
+
+  // Scroll controller for fade effects
+  final ScrollController _scrollCtrl = ScrollController();
+  double _scrollOffset = 0;
+
+  static const double _headerMaxHeight = 380;
+  static const double _headerMinHeight = 0;
+  static const double _tabBarHeight = 52;
+  static const double _titleHeight = 64;
+  static const double _metaHeight = 72;
 
   final List<Map<String, dynamic>> _tabs = [
     {'label': 'SCORE', 'icon': Icons.star_rounded},
@@ -65,17 +95,55 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     {'label': 'SALES', 'icon': Icons.attach_money_rounded},
   ];
 
-  // ========================================================================
-  // LIFECYCLE
-  // ========================================================================
   @override
   void initState() {
     super.initState();
-    _loadEntries();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadEntries();
+    });
+    _scrollCtrl.addListener(() {
+      if (mounted) {
+        setState(() => _scrollOffset = _scrollCtrl.offset);
+      }
+    });
   }
 
+  @override
+  void dispose() {
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  // Future<void> _loadEntries() async {
+  //   setState(() {
+  //     _entriesLoading = true;
+  //     _entriesError = null;
+  //   });
+
+  //   try {
+  //     // Hardcoded ID se test karo
+  //     const testId = 'e5e633ae-daec-40c6-9251-506d766538b8';
+
+  //     final response = await SupaFlow.client
+  //         .from('v_media_competition_entries')
+  //         .select()
+  //         .eq('media_id', testId);
+
+  //     if (!mounted) return;
+  //     setState(() {
+  //       _entries = List<Map<String, dynamic>>.from(response as List);
+  //       _entriesLoading = false;
+  //       _entriesError = null;
+  //     });
+  //   } catch (e) {
+  //     if (!mounted) return;
+  //     setState(() {
+  //       _entriesError = e.toString();
+  //       _entriesLoading = false;
+  //     });
+  //   }
+  // }
   Future<void> _loadEntries() async {
-    // Priority 1: agar parameter mein entriesJson aa raha hai, woh use karo
     if (widget.entriesJson != null && widget.entriesJson!.isNotEmpty) {
       try {
         final parsed = jsonDecode(widget.entriesJson!);
@@ -86,25 +154,24 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
           });
           return;
         }
-      } catch (_) {
-        // fall through to direct fetch
-      }
+      } catch (_) {}
     }
 
-    // Priority 2: direct Supabase fetch from view
     setState(() => _entriesLoading = true);
     try {
       final response = await SupaFlow.client
           .from('v_media_competition_entries')
           .select()
           .eq('media_id', widget.mediaId)
-          .order('judging_date', ascending: false, nullsFirst: false);
+          .order('submittal_deadline', ascending: false, nullsFirst: false);
 
+      if (!mounted) return;
       setState(() {
         _entries = List<Map<String, dynamic>>.from(response as List);
         _entriesLoading = false;
       });
     } catch (e) {
+      if (!mounted) return;
       setState(() {
         _entriesError = e.toString();
         _entriesLoading = false;
@@ -112,9 +179,6 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     }
   }
 
-  // ========================================================================
-  // HELPERS
-  // ========================================================================
   Map<String, dynamic> _parseJson(String? raw) {
     if (raw == null || raw.isEmpty) return {};
     try {
@@ -137,9 +201,296 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
   String _truncate(String val, int max) =>
       val.length > max ? '${val.substring(0, max)}…' : val;
 
-  // ========================================================================
-  // METADATA HEADER
-  // ========================================================================
+  // ══════════════════════════════════════════════════════════════════════════
+  // BUILD
+  // ══════════════════════════════════════════════════════════════════════════
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: widget.width ?? double.infinity,
+      height: widget.height,
+      child: Container(
+        color: const Color(0xFF0A0C0F),
+        child: Stack(
+          children: [
+            // Main scroll view with slivers
+            CustomScrollView(
+              controller: _scrollCtrl,
+              physics: const BouncingScrollPhysics(
+                  parent: AlwaysScrollableScrollPhysics()),
+              slivers: [
+                _buildSliverImageHeader(),
+                _buildSliverTitleSection(),
+                _buildSliverMetadataSection(),
+                _buildSliverTabBar(context),
+                _buildSliverTabContent(context),
+              ],
+            ),
+            // Floating back button (always visible at top)
+            _buildBackButton(context),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // BACK BUTTON (floats above everything)
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildBackButton(BuildContext context) {
+    final safeTop = MediaQuery.of(context).padding.top;
+    final hideOpacity =
+        1.0 - (_scrollOffset / _headerMaxHeight).clamp(0.0, 1.0);
+
+    return Positioned(
+      top: safeTop + 8,
+      left: 12,
+      right: 12,
+      child: IgnorePointer(
+        ignoring: hideOpacity < 0.1, // small threshold for clickability
+        child: AnimatedOpacity(
+          duration: const Duration(milliseconds: 150),
+          opacity: hideOpacity,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              // Action buttons (eye + close)
+              _circleBtn(Icons.visibility_outlined, () {
+                context.pushNamed('FullScreenImageViewer');
+              }),
+              const SizedBox(width: 8),
+              _circleBtn(Icons.close_rounded, () async {
+                if (widget.onBack != null) {
+                  await widget.onBack!();
+                } else if (Navigator.canPop(context)) {
+                  Navigator.pop(context);
+                }
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _circleBtn(IconData icon, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 32,
+        height: 32,
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(
+              100), // Perfect circular shape for gradient container
+          gradient: const LinearGradient(
+            colors: [
+              Color(0xE5A4A4A4), // Alpha/Opacity (E5) first, then hex (A4A4A4)
+              Color(0x99252525), // Alpha/Opacity (99) first, then hex (252525)
+            ],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+          ),
+        ),
+        child: Center(
+          child: Icon(icon, color: Colors.white, size: 16),
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SLIVER 1: IMAGE HEADER (fades on scroll)
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildSliverImageHeader() {
+    return SliverAppBar(
+      pinned: false,
+      floating: false,
+      stretch: true,
+      expandedHeight: _headerMaxHeight,
+      collapsedHeight: _headerMinHeight + 0.1, // near-zero (just enough)
+      toolbarHeight: 0,
+      automaticallyImplyLeading: false,
+      backgroundColor: const Color(0xFF0A0C0F),
+      elevation: 0,
+      flexibleSpace: FlexibleSpaceBar(
+        stretchModes: const [
+          StretchMode.zoomBackground,
+          StretchMode.blurBackground,
+        ],
+        collapseMode: CollapseMode.parallax,
+        background: _buildImageContent(),
+      ),
+    );
+  }
+
+  Widget _buildImageContent() {
+    // Fade based on scroll
+    final fadeStart = 100.0;
+    final fadeEnd = 320.0;
+    final opacity = 1 -
+        ((_scrollOffset - fadeStart) / (fadeEnd - fadeStart)).clamp(0.0, 1.0);
+
+    return Opacity(
+      opacity: opacity,
+      child: Container(
+        color: const Color(0xFF1A1D21),
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            // Image
+            if (widget.imageUrl.isNotEmpty &&
+                widget.imageUrl.startsWith('http'))
+              Image.network(
+                widget.imageUrl,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _imagePlaceholder(),
+                loadingBuilder: (_, child, progress) {
+                  if (progress == null) return child;
+                  return Container(
+                    color: const Color(0xFF1A1D21),
+                    child: Center(
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        value: progress.expectedTotalBytes != null
+                            ? progress.cumulativeBytesLoaded /
+                                progress.expectedTotalBytes!
+                            : null,
+                        color: FlutterFlowTheme.of(context).primary,
+                      ),
+                    ),
+                  );
+                },
+              )
+            else
+              _imagePlaceholder(),
+            // Bottom gradient for smooth transition into title section
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              height: 80,
+              child: Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      const Color(0xFF0A0C0F).withOpacity(0.8),
+                      const Color(0xFF0A0C0F),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _imagePlaceholder() {
+    return Container(
+      color: const Color(0xFF1A1D21),
+      child: Center(
+        child: Icon(
+          Icons.image_not_supported_rounded,
+          color: Colors.white.withOpacity(0.2),
+          size: 48,
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SLIVER 2: TITLE + MAKER
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildSliverTitleSection() {
+    return SliverToBoxAdapter(
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            if ((widget.title ?? '').isNotEmpty)
+              Text(
+                widget.title!,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 22,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2),
+              ),
+            if ((widget.makerName ?? '').isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          widget.makerName!,
+                          style: TextStyle(
+                              color: Colors.white.withOpacity(0.85),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600),
+                        ),
+                        if ((widget.makerTagline ?? '').isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 2),
+                            child: Text(
+                              widget.makerTagline!,
+                              style: TextStyle(
+                                  color: Colors.white.withOpacity(0.4),
+                                  fontSize: 11),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Tier badge (optional — pull from highest_score later)
+                  if ((widget.highestScore ?? 0) > 0)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.greenAccent.withOpacity(0.2),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                            color: Colors.greenAccent.withOpacity(0.4)),
+                      ),
+                      child: Text(
+                        widget.highestScore! >= 90
+                            ? 'WINNER'
+                            : widget.highestScore! >= 80
+                                ? 'MERIT'
+                                : 'JUDGED',
+                        style: const TextStyle(
+                            color: Colors.greenAccent,
+                            fontSize: 9,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5),
+                      ),
+                    ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SLIVER 3: METADATA STRIP
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildSliverMetadataSection() {
+    return SliverToBoxAdapter(
+      child: _buildMetadataHeader(),
+    );
+  }
+
   Widget _buildMetadataHeader() {
     final meta = _parseJson(widget.metadataJson);
     final camera = meta['camera']?.toString() ?? '—';
@@ -148,7 +499,12 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     final focalLength = meta['focal_length']?.toString() ?? '—';
 
     return Container(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.fromLTRB(16, 8, 16, 14),
+      decoration: BoxDecoration(
+        border: Border(
+          top: BorderSide(color: Colors.white.withOpacity(0.06)),
+        ),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -167,9 +523,14 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
                   borderRadius: BorderRadius.circular(4),
                 ),
                 child: Text(
-                  'Entry #${widget.entryNumber ?? '—'}',
+                  widget.entryNumber != null && widget.entryNumber!.isNotEmpty
+                      ? '#${widget.entryNumber!.replaceFirst('private/', '').substring(0, widget.entryNumber!.replaceFirst('private/', '').length.clamp(0, 6))}…'
+                      : '—',
+                  //'Entry #${widget.entryNumber ?? '—'}',
                   style: TextStyle(
-                      color: Colors.white.withOpacity(0.5), fontSize: 10),
+                      overflow: TextOverflow.ellipsis,
+                      color: Colors.white.withOpacity(0.5),
+                      fontSize: 10),
                 ),
               ),
               if (widget.captureDate != null) ...[
@@ -222,99 +583,155 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  // ========================================================================
-  // TAB BAR
-  // ========================================================================
-  Widget _buildTabBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      child: SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        child: Row(
-          children: List.generate(_tabs.length, (index) {
-            final isSelected = _selectedTab == index;
-            // Show count badge for entries tab
-            final showBadge = _tabs[index]['label'] == 'ENTRIES' &&
-                _entries != null &&
-                _entries!.isNotEmpty;
-            return GestureDetector(
-              onTap: () => setState(() => _selectedTab = index),
-              child: AnimatedContainer(
-                duration: const Duration(milliseconds: 200),
-                margin: const EdgeInsets.only(right: 8),
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isSelected
-                      ? FlutterFlowTheme.of(context).primary
-                      : Colors.white.withOpacity(0.06),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isSelected
-                        ? FlutterFlowTheme.of(context).primary
-                        : Colors.white.withOpacity(0.12),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(_tabs[index]['icon'] as IconData,
-                        size: 12,
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.4)),
-                    const SizedBox(width: 5),
-                    Text(
-                      _tabs[index]['label'] as String,
-                      style: TextStyle(
-                        color: isSelected
-                            ? Colors.white
-                            : Colors.white.withOpacity(0.4),
-                        fontSize: 11,
-                        fontWeight:
-                            isSelected ? FontWeight.w700 : FontWeight.w500,
-                        letterSpacing: 0.5,
-                      ),
-                    ),
-                    if (showBadge) ...[
-                      const SizedBox(width: 5),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 5, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: isSelected
-                              ? Colors.white.withOpacity(0.25)
-                              : FlutterFlowTheme.of(context)
-                                  .primary
-                                  .withOpacity(0.8),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          '${_entries!.length}',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 9,
-                              fontWeight: FontWeight.bold),
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-            );
-          }),
-        ),
+  // ══════════════════════════════════════════════════════════════════════════
+  // SLIVER 4: PINNED TAB BAR
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildSliverTabBar(BuildContext context) {
+    return SliverPersistentHeader(
+      pinned: true,
+      delegate: _PinnedTabBarDelegate(
+        height: _tabBarHeight,
+        child: _buildTabBar(context),
       ),
     );
   }
 
-  // ========================================================================
+  Widget _buildTabBar(BuildContext context) {
+    return Container(
+      color: const Color(0xFF0A0C0F),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: List.generate(_tabs.length, (index) {
+                  final isSelected = _selectedTab == index;
+                  final showBadge = _tabs[index]['label'] == 'ENTRIES' &&
+                      _entries != null &&
+                      _entries!.isNotEmpty;
+                  return GestureDetector(
+                    onTap: () => setState(() => _selectedTab = index),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      margin: const EdgeInsets.only(right: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? FlutterFlowTheme.of(context).primary
+                            : Colors.white.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: isSelected
+                              ? FlutterFlowTheme.of(context).primary
+                              : Colors.white.withOpacity(0.12),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(_tabs[index]['icon'] as IconData,
+                              size: 12,
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4)),
+                          const SizedBox(width: 5),
+                          Text(
+                            _tabs[index]['label'] as String,
+                            style: TextStyle(
+                              color: isSelected
+                                  ? Colors.white
+                                  : Colors.white.withOpacity(0.4),
+                              fontSize: 11,
+                              fontWeight: isSelected
+                                  ? FontWeight.w700
+                                  : FontWeight.w500,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                          if (showBadge) ...[
+                            const SizedBox(width: 5),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 5, vertical: 1),
+                              decoration: BoxDecoration(
+                                color: isSelected
+                                    ? Colors.white.withOpacity(0.25)
+                                    : FlutterFlowTheme.of(context)
+                                        .primary
+                                        .withOpacity(0.8),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                '${_entries!.length}',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 9,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                  );
+                }),
+              ),
+            ),
+          ),
+          Container(
+            height: 1,
+            color: Colors.white.withOpacity(0.08),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
+  // SLIVER 5: TAB CONTENT (scrolls with rest)
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildSliverTabContent(BuildContext context) {
+    Widget content;
+    switch (_selectedTab) {
+      case 0:
+        content = _buildScoreTab(context);
+        break;
+      case 1:
+        content = _buildHistoryTab(context);
+        break;
+      case 2:
+        content = _buildEntriesTab(context);
+        break;
+      case 3:
+        content = _buildNotesTab(context);
+        break;
+      case 4:
+        content = _buildSalesTab();
+        break;
+      default:
+        content = const SizedBox();
+    }
+
+    return SliverToBoxAdapter(
+      child: Container(
+        color: const Color(0xFF0A0C0F),
+        constraints: BoxConstraints(
+          minHeight: MediaQuery.of(context).size.height * 0.4,
+        ),
+        child: content,
+      ),
+    );
+  }
+
+  // ══════════════════════════════════════════════════════════════════════════
   // SCORE TAB
-  // ========================================================================
-  Widget _buildScoreTab() {
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildScoreTab(BuildContext context) {
     final avg = widget.averageScore ?? 0;
     final high = widget.highestScore ?? 0;
-
     return Padding(
       padding: const EdgeInsets.all(14),
       child: Column(
@@ -376,9 +793,9 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
           const SizedBox(height: 16),
           Row(
             children: [
-              _scoreBox('Average Score', avg),
+              _scoreBox('Average Score', avg, context),
               const SizedBox(width: 12),
-              _scoreBox('Highest Score', high),
+              _scoreBox('Highest Score', high, context),
             ],
           ),
         ],
@@ -386,7 +803,7 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  Widget _scoreBox(String label, double score) {
+  Widget _scoreBox(String label, double score, BuildContext context) {
     return Expanded(
       child: Container(
         padding: const EdgeInsets.all(14),
@@ -415,10 +832,10 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  // ========================================================================
+  // ══════════════════════════════════════════════════════════════════════════
   // HISTORY TAB
-  // ========================================================================
-  Widget _buildHistoryTab() {
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildHistoryTab(BuildContext context) {
     final proc = _parseJson(widget.processingDataJson);
     final software = proc['software']?.toString() ?? '';
     final historyWhen = proc['history_when']?.toString() ?? '';
@@ -545,11 +962,10 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  // ========================================================================
-  // ENTRIES TAB — ★ THE BIG REWRITE ★
-  // ========================================================================
-  Widget _buildEntriesTab() {
-    // Loading state
+  // ══════════════════════════════════════════════════════════════════════════
+  // ENTRIES TAB
+  // ══════════════════════════════════════════════════════════════════════════
+  Widget _buildEntriesTab(BuildContext context) {
     if (_entriesLoading) {
       return const Padding(
         padding: EdgeInsets.all(40),
@@ -560,7 +976,6 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
       );
     }
 
-    // Error state
     if (_entriesError != null) {
       return Padding(
         padding: const EdgeInsets.all(14),
@@ -574,12 +989,11 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Row(
+              const Row(
                 children: [
-                  const Icon(Icons.error_outline,
-                      color: Colors.redAccent, size: 18),
-                  const SizedBox(width: 8),
-                  const Text('Could not load entries',
+                  Icon(Icons.error_outline, color: Colors.redAccent, size: 18),
+                  SizedBox(width: 8),
+                  Text('Could not load entries',
                       style: TextStyle(
                           color: Colors.redAccent,
                           fontSize: 13,
@@ -591,17 +1005,13 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
                   style: TextStyle(
                       color: Colors.white.withOpacity(0.6), fontSize: 11)),
               const SizedBox(height: 10),
-              TextButton(
-                onPressed: _loadEntries,
-                child: const Text('Retry'),
-              ),
+              TextButton(onPressed: _loadEntries, child: const Text('Retry')),
             ],
           ),
         ),
       );
     }
 
-    // Empty state
     if (_entries == null || _entries!.isEmpty) {
       return Padding(
         padding: const EdgeInsets.all(14),
@@ -651,8 +1061,7 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
       );
     }
 
-    // Data state — show entries
-    // Group entries by year for cleaner display
+    // Group entries by year
     final byYear = <String, List<Map<String, dynamic>>>{};
     for (final e in _entries!) {
       final raw = e['judging_date']?.toString() ?? e['entry_date']?.toString();
@@ -711,7 +1120,9 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
                             fontWeight: FontWeight.w600,
                             letterSpacing: 0.8)),
                   ),
-                  ...byYear[year]!.map((e) => _buildEntryCard(e)).toList(),
+                  ...byYear[year]!
+                      .map((e) => _buildEntryCard(e, context))
+                      .toList(),
                 ],
               )),
         ],
@@ -719,10 +1130,24 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  Widget _buildEntryCard(Map<String, dynamic> entry) {
+  Widget _buildEntryCard(Map<String, dynamic> entry, BuildContext context) {
+    // ✅ contest_name directly use karo
     final contestName = entry['contest_name']?.toString() ?? 'Unknown Contest';
-    final orgName = entry['organization_name']?.toString() ?? '';
-    final judgingDate = _formatDate(entry['judging_date']?.toString());
+
+    // ✅ organization_name UUID ho to skip karo
+    final orgRaw = entry['organization_name']?.toString() ?? '';
+    final orgName = (orgRaw.length == 36 && orgRaw.contains('-')) ? '' : orgRaw;
+
+    // ✅ submittal_deadline use karo — judging_date 00:00 wala hai
+    String displayDate = '';
+    final sd = entry['submittal_deadline']?.toString() ?? '';
+    final jd = entry['judging_date']?.toString() ?? '';
+    if (sd.isNotEmpty && !sd.startsWith('00:')) {
+      displayDate = _formatDate(sd);
+    } else if (jd.isNotEmpty && !jd.startsWith('00:')) {
+      displayDate = _formatDate(jd);
+    }
+
     final avgScore = entry['avg_score'];
     final maxScore = entry['max_score'];
     final judgeCount = entry['judge_count'];
@@ -730,8 +1155,6 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     final awardName = entry['award_name']?.toString();
     final awardColorHex = entry['award_color_hex']?.toString();
     final scoreAwardText = entry['score_award_text']?.toString();
-
-    // Badge color & label
     final badgeStyle = _badgeStyle(resultBadge, awardColorHex);
 
     return Container(
@@ -745,7 +1168,6 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header: contest name + badge
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -775,10 +1197,7 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
               _resultBadge(badgeStyle, awardName ?? scoreAwardText),
             ],
           ),
-
           const SizedBox(height: 10),
-
-          // Footer: scores + date
           Row(
             children: [
               if (avgScore != null) ...[
@@ -787,7 +1206,8 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
                     avgScore is num
                         ? avgScore.toStringAsFixed(1)
                         : avgScore.toString(),
-                    accent: false),
+                    accent: false,
+                    context: context),
                 const SizedBox(width: 6),
               ],
               if (maxScore != null) ...[
@@ -796,14 +1216,16 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
                     maxScore is num
                         ? maxScore.toStringAsFixed(0)
                         : maxScore.toString(),
-                    accent: true),
+                    accent: true,
+                    context: context),
                 const SizedBox(width: 6),
               ],
               if (judgeCount != null && (judgeCount as num) > 0)
-                _scoreChip('$judgeCount Judges', '', accent: false),
+                _scoreChip('$judgeCount Judges', '',
+                    accent: false, context: context),
               const Spacer(),
-              if (judgingDate.isNotEmpty)
-                Text(judgingDate,
+              if (displayDate.isNotEmpty)
+                Text(displayDate,
                     style: TextStyle(
                         color: Colors.white.withOpacity(0.4),
                         fontSize: 10,
@@ -815,7 +1237,6 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  // Badge style mapping
   Map<String, dynamic> _badgeStyle(String code, String? customHex) {
     Color bg;
     String label;
@@ -876,7 +1297,8 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  Widget _scoreChip(String label, String value, {required bool accent}) {
+  Widget _scoreChip(String label, String value,
+      {required bool accent, required BuildContext context}) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
@@ -912,89 +1334,37 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
     );
   }
 
-  // ========================================================================
-  // NOTES TAB
-  // ========================================================================
-  Widget _buildNotesTab() {
+  // ══════════════════════════════════════════════════════════════════════════
+  // NOTES TAB → embeds CritiqueTab from custom_widgets
+  // ══════════════════════════════════════════════════════════════════════════
+  // Widget _buildNotesTab(BuildContext context) {
+  //   // ✅ No fixed height — uses MediaQuery so it adapts to device
+  //   return SizedBox(
+  //     height: MediaQuery.of(context).size.height * 0.75,
+  //     child: CritiqueTab(
+  //       mediaId: widget.mediaId,
+  //       width: widget.width,
+  //     ),
+  //   );
+  // }
+  Widget _buildNotesTab(BuildContext context) {
+    // mediaId empty ho to AppState se lo
+    final id = widget.mediaId.isNotEmpty
+        ? widget.mediaId
+        : FFAppState().selectedMediaId;
+
     return SizedBox(
-      height: 600, // ya jo bhi suit kare
-      child: custom_widgets.CritiqueTab(
-        mediaId: widget.mediaId,
+      height: MediaQuery.of(context).size.height * 0.75,
+      child: CritiqueTab(
+        mediaId: id, // ← yeh fix hai
         width: widget.width,
       ),
     );
   }
 
-  //   final noteController = TextEditingController();
-  //   return Padding(
-  //     padding: const EdgeInsets.all(14),
-  //     child: Column(
-  //       crossAxisAlignment: CrossAxisAlignment.start,
-  //       children: [
-  //         const Text('Notes & Critiques',
-  //             style: TextStyle(
-  //                 color: Colors.white,
-  //                 fontSize: 14,
-  //                 fontWeight: FontWeight.w600)),
-  //         const SizedBox(height: 12),
-  //         const Text('Add Private Note',
-  //             style: TextStyle(
-  //                 color: Colors.white,
-  //                 fontSize: 13,
-  //                 fontWeight: FontWeight.w500)),
-  //         const SizedBox(height: 8),
-  //         TextField(
-  //           controller: noteController,
-  //           maxLines: 4,
-  //           style: const TextStyle(color: Colors.white, fontSize: 13),
-  //           decoration: InputDecoration(
-  //             hintText: 'Write your thoughts...',
-  //             hintStyle:
-  //                 TextStyle(color: Colors.white.withOpacity(0.3), fontSize: 13),
-  //             filled: true,
-  //             fillColor: Colors.white.withOpacity(0.05),
-  //             border: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //               borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-  //             ),
-  //             enabledBorder: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //               borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
-  //             ),
-  //             focusedBorder: OutlineInputBorder(
-  //               borderRadius: BorderRadius.circular(10),
-  //               borderSide: BorderSide(
-  //                   color: FlutterFlowTheme.of(context).primary, width: 1.5),
-  //             ),
-  //           ),
-  //         ),
-  //         const SizedBox(height: 10),
-  //         SizedBox(
-  //           width: double.infinity,
-  //           child: ElevatedButton(
-  //             onPressed: () {},
-  //             style: ElevatedButton.styleFrom(
-  //               backgroundColor: Colors.white.withOpacity(0.1),
-  //               shape: RoundedRectangleBorder(
-  //                   borderRadius: BorderRadius.circular(10)),
-  //               padding: const EdgeInsets.symmetric(vertical: 14),
-  //             ),
-  //             child: const Text('ADD NOTE',
-  //                 style: TextStyle(
-  //                     color: Colors.white,
-  //                     fontSize: 12,
-  //                     fontWeight: FontWeight.bold,
-  //                     letterSpacing: 1)),
-  //           ),
-  //         ),
-  //       ],
-  //     ),
-  //   );
-  // }
-
-  // ========================================================================
+  // ══════════════════════════════════════════════════════════════════════════
   // SALES TAB
-  // ========================================================================
+  // ══════════════════════════════════════════════════════════════════════════
   Widget _buildSalesTab() {
     return Padding(
       padding: const EdgeInsets.all(14),
@@ -1060,43 +1430,33 @@ class _MediaDetailTabsState extends State<MediaDetailTabs> {
       ),
     );
   }
+}
 
-  // ========================================================================
-  // BUILD
-  // ========================================================================
+// ════════════════════════════════════════════════════════════════════════════
+// PINNED TAB BAR DELEGATE
+// ════════════════════════════════════════════════════════════════════════════
+class _PinnedTabBarDelegate extends SliverPersistentHeaderDelegate {
+  final double height;
+  final Widget child;
+
+  _PinnedTabBarDelegate({required this.height, required this.child});
+
   @override
-  Widget build(BuildContext context) {
-    final tabs = [
-      _buildScoreTab(),
-      _buildHistoryTab(),
-      _buildEntriesTab(),
-      _buildNotesTab(),
-      _buildSalesTab(),
-    ];
-
-    return SizedBox(
-      width: widget.width ?? double.infinity,
-      height: widget.height,
-      child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF13161A),
-          borderRadius: BorderRadius.circular(16),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _buildMetadataHeader(),
-            const Divider(color: Colors.white12, height: 1),
-            _buildTabBar(),
-            const Divider(color: Colors.white12, height: 1),
-            Flexible(
-              child: SingleChildScrollView(
-                child: tabs[_selectedTab],
-              ),
-            ),
-          ],
-        ),
-      ),
+  Widget build(
+      BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return Material(
+      color: Colors.transparent,
+      elevation: overlapsContent ? 4 : 0,
+      shadowColor: Colors.black54,
+      child: child,
     );
   }
+
+  @override
+  double get maxExtent => height;
+  @override
+  double get minExtent => height;
+  @override
+  bool shouldRebuild(_PinnedTabBarDelegate old) =>
+      child != old.child || height != old.height;
 }

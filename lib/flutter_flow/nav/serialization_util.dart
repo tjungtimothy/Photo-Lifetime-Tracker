@@ -188,6 +188,9 @@ enum ParamType {
   JSON,
 
   SupabaseRow,
+
+  CustomClass,
+  CustomEnum,
 }
 
 dynamic deserializeParam<T>(

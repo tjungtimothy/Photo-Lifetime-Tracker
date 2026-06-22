@@ -1,5 +1,4 @@
 import '/common_widgets/common_nav_bar/common_nav_bar_widget.dart';
-import '/flutter_flow/flutter_flow_theme.dart';
 import '/flutter_flow/flutter_flow_util.dart';
 import '/custom_code/widgets/index.dart' as custom_widgets;
 import '/index.dart';
@@ -26,6 +25,8 @@ class _HomeScreenWidgetState extends State<HomeScreenWidget> {
   void initState() {
     super.initState();
     _model = createModel(context, () => HomeScreenModel());
+
+    WidgetsBinding.instance.addPostFrameCallback((_) => safeSetState(() {}));
   }
 
   @override
@@ -44,7 +45,7 @@ class _HomeScreenWidgetState extends State<HomeScreenWidget> {
       },
       child: Scaffold(
         key: scaffoldKey,
-        backgroundColor: FlutterFlowTheme.of(context).primaryBackground,
+        backgroundColor: Color(0xFF181E21),
         body: NestedScrollView(
           floatHeaderSlivers: false,
           headerSliverBuilder: (context, _) => [
@@ -105,8 +106,7 @@ class _HomeScreenWidgetState extends State<HomeScreenWidget> {
                                 },
                                 child: Icon(
                                   Icons.search,
-                                  color:
-                                      FlutterFlowTheme.of(context).primaryText,
+                                  color: Colors.white,
                                   size: 20.0,
                                 ),
                               ),
@@ -153,46 +153,53 @@ class _HomeScreenWidgetState extends State<HomeScreenWidget> {
             builder: (context) {
               return SafeArea(
                 top: false,
-                child: Stack(
-                  children: [
-                    Container(
-                      width: double.infinity,
-                      height: double.infinity,
-                      child: custom_widgets.MediaGridView(
-                        width: double.infinity,
-                        height: double.infinity,
-                        pageSize: 10,
-                        onCardTap: (mediaId) async {
-                          context.pushNamed(PhotoDetailScreenWidget.routeName);
-                        },
+                child: Container(
+                  decoration: BoxDecoration(),
+                  child: Stack(
+                    children: [
+                      Align(
+                        alignment: AlignmentDirectional(0.0, 0.0),
+                        child: Container(
+                          width: double.infinity,
+                          height: double.infinity,
+                          child: custom_widgets.MediaGridView(
+                            width: double.infinity,
+                            height: double.infinity,
+                            pageSize: 8,
+                            onCardTap: (mediaId) async {
+                              context
+                                  .pushNamed(PhotoDetailScreenWidget.routeName);
+                            },
+                          ),
+                        ),
                       ),
-                    ),
-                    Align(
-                      alignment: AlignmentDirectional(0.0, 0.0),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.max,
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        crossAxisAlignment: CrossAxisAlignment.center,
-                        children: [
-                          wrapWithModel(
-                            model: _model.commonNavBarModel,
-                            updateCallback: () => safeSetState(() {}),
-                            updateOnChange: true,
-                            child: Hero(
-                              tag: '',
-                              transitionOnUserGestures: true,
-                              child: Material(
-                                color: Colors.transparent,
-                                child: CommonNavBarWidget(
-                                  navIndex: 0,
+                      Align(
+                        alignment: AlignmentDirectional(0.0, 0.0),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.max,
+                          mainAxisAlignment: MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            wrapWithModel(
+                              model: _model.commonNavBarModel,
+                              updateCallback: () => safeSetState(() {}),
+                              updateOnChange: true,
+                              child: Hero(
+                                tag: '',
+                                transitionOnUserGestures: true,
+                                child: Material(
+                                  color: Colors.transparent,
+                                  child: CommonNavBarWidget(
+                                    navIndex: 0,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
